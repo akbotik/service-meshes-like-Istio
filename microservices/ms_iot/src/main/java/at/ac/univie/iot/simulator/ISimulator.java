@@ -3,6 +3,7 @@ package at.ac.univie.iot.simulator;
 import at.ac.univie.iot.configuration.Sensor;
 import at.ac.univie.iot.data.ESensor;
 import at.ac.univie.iot.data.SensorData;
+import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.Random;
@@ -10,17 +11,14 @@ import java.util.Random;
 import static at.ac.univie.iot.data.GeneratorParameters.MIN_RANGE;
 
 /**
- * Concrete simulator classes implement a simulate
- * method defined by the ISimulator interface.
+ * Concrete simulator classes implement abstract
+ * methods defined by the ISimulator interface.
  * It is used when the client does not know
  * in advance which concrete products would be created.
  */
+@Service
 public interface ISimulator {
 
-    /**
-     * Generates and publishes a stream of simulated sensor values.
-     * @param sensor event with predefined sensor id and type
-     */
     SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs);
 
     double getRandomAverageValueForOneDay(double avgValueForCurrentMonth);

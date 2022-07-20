@@ -1,7 +1,7 @@
 package at.ac.univie.fog.data;
 
 /**
- * Sensor type.
+ * Sensor data type.
  */
 public enum ESensor {
     TEMPERATURE,

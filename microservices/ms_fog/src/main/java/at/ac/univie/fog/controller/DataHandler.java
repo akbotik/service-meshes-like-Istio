@@ -3,10 +3,12 @@ package at.ac.univie.fog.controller;
 import at.ac.univie.fog.aggregator.AggregatorFactory;
 import at.ac.univie.fog.aggregator.IAggregator;
 import at.ac.univie.fog.data.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -16,6 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class DataHandler {
 
     @Value("${dataType}")
@@ -31,7 +34,6 @@ public class DataHandler {
     private AggregatorFactory aggregatorFactory;
 
     private static final short HOURS_IN_DAY = 24;
-
 
     public List<SensorData> getDataForCurrentInterval(SensorData sensorData, Set<SensorData> sensorDataSet) {
         switch (aggregationInterval) {
@@ -74,5 +76,10 @@ public class DataHandler {
         return aggregatorFactory.findAggregator(aggregationMode);
     }
 
+    @PostConstruct
+    private void log() {
+        log.info("Aggregation mode: {}. Aggregation interval: {}. Data type {}.",
+                aggregationMode.name(), aggregationInterval.name(), dataType.name());
+    }
 
 }

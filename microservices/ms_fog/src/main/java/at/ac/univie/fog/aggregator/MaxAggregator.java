@@ -16,7 +16,6 @@ public class MaxAggregator implements IAggregator {
         return EAggregationMode.MAX;
     }
 
-
     @Override
     public double aggregate(List<SensorData> sensorDataList) {
         var maxValueEvent = sensorDataList.stream().max(Comparator.comparingDouble(SensorData::getSensorValue)).orElseThrow(NoSuchElementException::new);

@@ -15,7 +15,6 @@ public class AvgAggregator implements IAggregator {
         return EAggregationMode.AVG;
     }
 
-
     @Override
     public double aggregate(List<SensorData> sensorDataList) {
         if (sensorDataList == null || sensorDataList.size() == 0) throw new NoSuchElementException();

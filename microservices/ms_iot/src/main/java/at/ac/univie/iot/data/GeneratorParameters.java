@@ -47,7 +47,6 @@ public class GeneratorParameters {
         put(11, -20.0);
     }};
 
-
     public static final String ROUNDING = "%.2f";
 
 }

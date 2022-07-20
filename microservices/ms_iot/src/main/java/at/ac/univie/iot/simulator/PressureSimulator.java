@@ -2,8 +2,9 @@ package at.ac.univie.iot.simulator;
 
 import at.ac.univie.iot.configuration.Sensor;
 import at.ac.univie.iot.data.ESensor;
-import at.ac.univie.iot.data.SensorData;
 import at.ac.univie.iot.data.GeneratorParameters;
+import at.ac.univie.iot.data.SensorData;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -13,10 +14,10 @@ import java.util.Date;
 import static at.ac.univie.iot.data.GeneratorParameters.*;
 
 /**
- * Generates and publishes pressure data beginning 1970-01-01.
- * Average pressure is generated hourly.
+ * Generates a reasonable sensor data.
  * Anomaly frequency is defined in {@link GeneratorParameters}
  */
+@Component
 public class PressureSimulator implements ISimulator {
 
     private final String UTC_ZONE = "UTC";

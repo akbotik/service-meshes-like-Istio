@@ -4,7 +4,7 @@ import javax.persistence.*;
 import java.time.LocalDate;
 
 /**
- * Aggregated sensor data sent to MS ML.
+ * Aggregated sensor data saved to database.
  */
 @Entity
 @Table(name = "aggregated_data")

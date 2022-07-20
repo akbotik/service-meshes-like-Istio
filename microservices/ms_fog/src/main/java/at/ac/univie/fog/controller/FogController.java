@@ -4,8 +4,7 @@ import at.ac.univie.fog.aggregator.IAggregator;
 import at.ac.univie.fog.data.AggregatedData;
 import at.ac.univie.fog.data.SensorData;
 import at.ac.univie.fog.repository.FogRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +16,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Component
+@Slf4j
 public class FogController {
-
-    private static Logger logger = LoggerFactory.getLogger(FogController.class.getName());
 
     @Autowired
     FogRepository fogRepository;
@@ -39,14 +37,12 @@ public class FogController {
     }
 
     public void onDataReceived(SensorData sensorData) {
-        executor.execute(() -> {
-            aggregateData(sensorData);
-        });
+        executor.execute(() -> aggregateData(sensorData));
     }
 
     /**
      *  Injects the aggregation strategy of the fog computing defined in the configuration file.
-     *  If events for the whole interval are received, the aggregated data is sent to MS ML.
+     *  If sensor data for the whole interval is received, the aggregated data is saved to database.
      */
     private void aggregateData(SensorData sensorData) {
         // if sensor data was already saved, do not process it again
@@ -70,16 +66,9 @@ public class FogController {
             double aggregatedValue = aggregator.aggregate(dataForInterval);
             AggregatedData aggregatedData = dataHandler.getAggregatedData(sensorData.getTimestamp(), aggregatedValue);
             dataForInterval.forEach(this.sensorDataSet::remove);
-            logger.info("Saving to database: {}", aggregatedData);
-            saveData(aggregatedData);
+            fogRepository.save(aggregatedData);
+            log.info("Saved to database: {}", aggregatedData);
         }
-    }
-
-    /**
-     * Use UDP socket to the aggregated send data to MS ML.
-     */
-    private void saveData(AggregatedData aggregatedData) {
-        fogRepository.save(aggregatedData);
     }
 
 }
