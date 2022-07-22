@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import psycopg2
 import requests
+from darts import TimeSeries
+from darts.models import ExponentialSmoothing
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request
 from flask import jsonify, abort, make_response
@@ -61,33 +63,23 @@ def get_daterange(agg_interval, date, accuracy):
     return start_date, end_date
 
 
-def get_query(data_type, start_date, end_date, agg_interval, save_freq):
+def get_query(data_type, start_date, end_date, agg_interval, freq):
     str_start_date = datetime.datetime.strftime(start_date, "%Y-%m-%d")
     str_end_date = datetime.datetime.strftime(end_date, "%Y-%m-%d")
 
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
             f" WHERE data_type = '{data_type}'" \
             f" AND '[{str_start_date}, {str_end_date}]'::daterange @> timestamp"
-    if agg_interval != YEAR:
-        query = query + f" AND DATE_PART('{MONTH.lower()}', timestamp) = {end_date.month}"
-    if (agg_interval == DAY) and (save_freq == False):
-        query = query + f" AND DATE_PART('{DAY.lower()}', timestamp) <= {end_date.day}"
+    if freq:
+        if agg_interval != YEAR:
+            query = query + f" AND DATE_PART('{MONTH.lower()}', timestamp) = {end_date.month}"
+        if agg_interval == DAY:
+            query = query + f" AND DATE_PART('{DAY.lower()}', timestamp) <= {end_date.day}"
     query = query + f" ORDER BY timestamp"
     return query
 
 
-def preprocess(df):
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    len_prev = len(df)
-    df.drop_duplicates(inplace=True)
-    len_curr = len(df)
-    print("\nRemoved duplicates:")
-    print(len_prev - len_curr)
-    df.set_index('timestamp', inplace=True)
-    return df
-
-
-def load(data_type, date, accuracy, save_freq=False):
+def load(data_type, date, accuracy, freq=False):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -96,13 +88,12 @@ def load(data_type, date, accuracy, save_freq=False):
         if cur.rowcount > 0:
             agg_mode, agg_interval = cur.fetchone()
             start_date, end_date = get_daterange(agg_interval, date, accuracy)
-            query = get_query(data_type, start_date, end_date, agg_interval, save_freq)
+            query = get_query(data_type, start_date, end_date, agg_interval, freq)
             print("\nPrediction query:")
             print(query)
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
-                df = preprocess(df)
                 cur.close()
                 conn.close()
                 return df, agg_mode, agg_interval, end_date
@@ -116,17 +107,28 @@ def load(data_type, date, accuracy, save_freq=False):
         abort(400)
 
 
+def preprocess(df, transform=False):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
+    df.drop_duplicates(inplace=True)
+    df.sort_values(by=['timestamp'])
+    if transform:
+        s = TimeSeries.from_dataframe(df, 'timestamp', 'data_value')
+    else:
+        s = df.set_index('timestamp')
+    return s
+
+
 def clean_anomaly(df):
     try:
         url = ANOMALY_DETECTION_URL
-        json_df = df.to_json(orient='index')
-        response = requests.post(url, json=json_df)
+        json_request = df.to_json(orient='index')
+        response = requests.delete(url, json=json_request)
         response.raise_for_status()
-        json_no_anomaly = response.json()
-        df_no_anomaly = pd.read_json(json_no_anomaly, orient='index')
-        df_no_anomaly.sort_index(inplace=True)
-        df_no_anomaly.rename_axis('timestamp', inplace=True)
-        return df_no_anomaly
+        json_response = response.json()
+        df = pd.read_json(json_response, orient='index')
+        df.sort_index(inplace=True)
+        df.rename_axis('timestamp', inplace=True)
+        return df
     except HTTPError as http_err:
         logging.error(http_err)
         abort(400)
@@ -145,21 +147,21 @@ def get_missing_date(last_date, end_date, agg_interval):
     return missing_date
 
 
-def fill_missing_values(data, end_date, agg_interval, model=None):
+def fill_missing_values(s, end_date, agg_interval, model=None):
     if model is None:
-        last_date = data.index[-1].date()
+        last_date = s.index[-1].date()
         while last_date != end_date:
             missing_date = get_missing_date(last_date, end_date, agg_interval)
             if missing_date.month == end_date.month:
                 if missing_date.day <= end_date.day:
-                    arr = data['data_value'].to_numpy()
+                    arr = s['data_value'].to_numpy()
                     hist, bins = np.histogram(arr, bins='fd')
                     missing_value = (bins[hist.argmax()] + bins[hist.argmax() + 1]) / 2
                     prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
-                    data = pd.concat([data, prediction])
+                    s = pd.concat([s, prediction])
             last_date = missing_date
     else:
-        last_date = data.end_time().to_pydatetime().date()
+        last_date = s.end_time().to_pydatetime().date()
         num_steps = 0
         while last_date != end_date:
             missing_date = get_missing_date(last_date, end_date, agg_interval)
@@ -167,13 +169,13 @@ def fill_missing_values(data, end_date, agg_interval, model=None):
             last_date = missing_date
         if num_steps > 0:
             prediction = model.predict(num_steps)
-            data = data.concatenate(prediction, ignore_time_axes=True)
-    return data
+            s = s.concatenate(prediction, ignore_time_axes=True)
+    return s
 
 
-def get_predicted_value(data, model=None):
+def get_predicted_value(s, model=None):
     if model is None:
-        arr = data['data_value'].to_numpy()
+        arr = s['data_value'].to_numpy()
         hist, bins = np.histogram(arr, bins='fd')
         predicted_value = bins[hist.argmax()]
     else:
@@ -211,7 +213,8 @@ def predict_with_freedman_diaconis_estimator():
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # load data
-    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
+    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, freq=True)
+    df = preprocess(df)
     print("\nLoaded data:")
     print(df.tail())
 
@@ -247,21 +250,21 @@ def predict_with_exponential_smoothing():
 
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
+    ts = preprocess(df, transform=True)
     print("\nLoaded data:")
-    print(df.tail())
+    print(ts.pd_dataframe().tail())
 
     # train a forecasting model
     model = ExponentialSmoothing(damped=True)
-    model.fit(series)
+    model.fit(ts)
 
     # fill missing values
-    series_missing_values = fill_missing_values(series, end_date, agg_interval, model=model)
-    df_missing_values = series_missing_values.pd_dataframe()
+    ts_missing_values = fill_missing_values(ts, end_date, agg_interval, model=model)
     print("\nData with missing values:")
-    print(df_missing_values.tail())
+    print(ts_missing_values.pd_dataframe().tail())
 
     # predict
-    predicted_value = get_predicted_value(series_missing_values, model=model)
+    predicted_value = get_predicted_value(ts_missing_values, model=model)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)

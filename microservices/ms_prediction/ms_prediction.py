@@ -76,17 +76,6 @@ def get_query(data_type, start_date, end_date, agg_interval):
     return query
 
 
-def preprocess(df):
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    len_prev = len(df)
-    df.drop_duplicates(inplace=True)
-    len_curr = len(df)
-    print("\nRemoved duplicates:")
-    print(len_prev - len_curr)
-    df.set_index('timestamp', inplace=True)
-    return df
-
-
 def load(data_type, date, accuracy):
     try:
         conn = get_db_connection()
@@ -102,7 +91,6 @@ def load(data_type, date, accuracy):
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
-                df = preprocess(df)
                 cur.close()
                 conn.close()
                 return df, agg_mode, agg_interval, end_date
@@ -114,6 +102,14 @@ def load(data_type, date, accuracy):
     except (Exception, psycopg2.DatabaseError, psycopg2.OperationalError) as err:
         logging.error(err)
         abort(400)
+
+
+def preprocess(df):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
+    df.drop_duplicates(inplace=True)
+    df.set_index('timestamp', inplace=True)
+    df.sort_index(inplace=True)
+    return df
 
 
 def clean_anomaly(df):
@@ -198,6 +194,7 @@ def predict_with_freedman_diaconis_estimator():
 
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
+    df = preprocess(df)
     print("\nLoaded data:")
     print(df.tail())
 

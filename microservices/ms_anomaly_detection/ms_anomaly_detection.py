@@ -37,17 +37,6 @@ def get_query(data_type, start_date, end_date):
     return query
 
 
-def preprocess(df):
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    df.set_index('timestamp', inplace=True)
-    len_prev = len(df)
-    df = validate_series(df)
-    len_curr = len(df)
-    print("\nRemoved duplicates:")
-    print(len_prev - len_curr)
-    return df
-
-
 def load(data_type, start_date=None, end_date=None):
     try:
         conn = get_db_connection()
@@ -66,7 +55,6 @@ def load(data_type, start_date=None, end_date=None):
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
-                df = preprocess(df)
                 cur.close()
                 conn.close()
                 return df, agg_mode, agg_interval
@@ -78,6 +66,13 @@ def load(data_type, start_date=None, end_date=None):
     except (Exception, psycopg2.DatabaseError, psycopg2.OperationalError) as err:
         logging.error(err)
         abort(400)
+
+
+def preprocess(df):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
+    df.set_index('timestamp', inplace=True)
+    df = validate_series(df)
+    return df
 
 
 def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
@@ -142,6 +137,7 @@ def detect_anomaly_with_threshold():
 
     # load data
     df, agg_mode, agg_interval = load(data_type, start_date=start_date, end_date=end_date)
+    df = preprocess(df)
     print("\nLoaded data:")
     print(df.tail())
 
@@ -177,6 +173,7 @@ def detect_anomaly():
         abort(400)
 
     df, agg_mode, agg_interval = load(data_type)
+    df = preprocess(df)
     print("\nLoaded data:")
     print(df.tail())
 
