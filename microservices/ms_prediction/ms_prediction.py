@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import psycopg2
 import requests
-from darts import TimeSeries
-from darts.models import ExponentialSmoothing
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request
 from flask import jsonify, abort, make_response
@@ -78,6 +76,17 @@ def get_query(data_type, start_date, end_date, agg_interval, save_freq):
     return query
 
 
+def preprocess(df):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
+    len_prev = len(df)
+    df.drop_duplicates(inplace=True)
+    len_curr = len(df)
+    print("\nRemoved duplicates:")
+    print(len_prev - len_curr)
+    df.set_index('timestamp', inplace=True)
+    return df
+
+
 def load(data_type, date, accuracy, save_freq=False):
     try:
         conn = get_db_connection()
@@ -93,6 +102,7 @@ def load(data_type, date, accuracy, save_freq=False):
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
+                df = preprocess(df)
                 cur.close()
                 conn.close()
                 return df, agg_mode, agg_interval, end_date
@@ -202,8 +212,6 @@ def predict_with_freedman_diaconis_estimator():
 
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    df.set_index('timestamp', inplace=True)
     print("\nLoaded data:")
     print(df.tail())
 
@@ -217,48 +225,6 @@ def predict_with_freedman_diaconis_estimator():
 
     # predict
     predicted_value = get_predicted_value(df_missing_values)
-
-    # formulate a prediction
-    prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    print("\nPrediction:")
-    print(prediction)
-    return create_response(prediction, 200)
-
-
-@app.route('/v1/predictWithExponentialSmoothing', methods=['POST'])
-def predict_with_exponential_smoothing():
-    json = request.get_json()
-    data_type = json['type']
-    date = json['date']
-    accuracy = json['accuracy']
-
-    if (data_type is None) or (date is None) or (accuracy is None):
-        abort(400)
-
-    date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-
-    # load data
-    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, save_freq=True)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    print(df.to_string())
-    df.sort_index(inplace=True)
-    series = TimeSeries.from_dataframe(df, 'timestamp', 'data_value')
-    df.set_index('timestamp', inplace=True)
-    print("\nLoaded data:")
-    print(df.tail())
-
-    # train a forecasting model
-    model = ExponentialSmoothing(damped=True)
-    model.fit(series)
-
-    # fill missing values
-    series_missing_values = fill_missing_values(series, end_date, agg_interval, model=model)
-    df_missing_values = series_missing_values.pd_dataframe()
-    print("\nData with missing values:")
-    print(df_missing_values.tail())
-
-    # predict
-    predicted_value = get_predicted_value(series_missing_values, model=model)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)

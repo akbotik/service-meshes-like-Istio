@@ -37,25 +37,15 @@ def get_query(data_type, start_date, end_date):
     return query
 
 
-def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
-    d = {
-        'agg_mode': agg_mode,
-        'agg_interval': agg_interval,
-        'data_type': data_type,
-        'anomaly_count': anomaly_count
-    }
-
-    if (start_date is not None) and (end_date is not None):
-        if agg_interval == YEAR:
-            d['start_date'] = f"{start_date.year}"
-            d['end_date'] = f"{end_date.year}"
-        elif agg_interval == MONTH:
-            d['start_date'] = f"{start_date.year}-{start_date.month}"
-            d['end_date'] = f"{end_date.year}-{end_date.month}"
-        else:
-            d['start_date'] = f"{start_date}"
-            d['end_date'] = f"{end_date}"
-    return d
+def preprocess(df):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
+    df.set_index('timestamp', inplace=True)
+    len_prev = len(df)
+    df = validate_series(df)
+    len_curr = len(df)
+    print("\nRemoved duplicates:")
+    print(len_prev - len_curr)
+    return df
 
 
 def load(data_type, start_date=None, end_date=None):
@@ -76,8 +66,7 @@ def load(data_type, start_date=None, end_date=None):
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
-                df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-                df.set_index('timestamp', inplace=True)
+                df = preprocess(df)
                 cur.close()
                 conn.close()
                 return df, agg_mode, agg_interval
@@ -89,6 +78,27 @@ def load(data_type, start_date=None, end_date=None):
     except (Exception, psycopg2.DatabaseError, psycopg2.OperationalError) as err:
         logging.error(err)
         abort(400)
+
+
+def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
+    d = {
+        'agg_mode': agg_mode,
+        'agg_interval': agg_interval,
+        'data_type': data_type,
+        'anomaly_count': anomaly_count
+    }
+
+    if (start_date is not None) and (end_date is not None):
+        if agg_interval == YEAR:
+            d['start_date'] = f"{start_date.year}"
+            d['end_date'] = f"{end_date.year}"
+        elif agg_interval == MONTH:
+            d['start_date'] = f"{start_date.year}-{start_date.month}"
+            d['end_date'] = f"{end_date.year}-{end_date.month}"
+        else:
+            d['start_date'] = f"{start_date}"
+            d['end_date'] = f"{end_date}"
+    return d
 
 
 @app.route('/v1/cleanAnomaly', methods=['POST'])
@@ -136,7 +146,6 @@ def detect_anomaly_with_threshold():
     print(df.tail())
 
     # detect anomaly
-    df = validate_series(df)
     threshold_ad = ThresholdAD(low=low, high=high)
     df_anomaly = threshold_ad.detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]
@@ -172,7 +181,6 @@ def detect_anomaly():
     print(df.tail())
 
     # detect anomaly
-    df = validate_series(df)
     esd_ad = GeneralizedESDTestAD()
     df_anomaly = esd_ad.fit_detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]

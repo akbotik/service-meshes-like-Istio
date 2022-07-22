@@ -5,15 +5,13 @@ import numpy as np
 import pandas as pd
 import psycopg2
 import requests
-from darts import TimeSeries
-from darts.models import ExponentialSmoothing
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request
 from flask import jsonify, abort, make_response
 from requests.exceptions import HTTPError
 
 app = Flask(__name__)
-PORT = 8085
+PORT = 8086
 
 ANOMALY_DETECTION_URL = 'http://localhost:8084/v1/cleanAnomaly'
 
@@ -78,6 +76,17 @@ def get_query(data_type, start_date, end_date, agg_interval, save_freq):
     return query
 
 
+def preprocess(df):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
+    len_prev = len(df)
+    df.drop_duplicates(inplace=True)
+    len_curr = len(df)
+    print("\nRemoved duplicates:")
+    print(len_prev - len_curr)
+    df.set_index('timestamp', inplace=True)
+    return df
+
+
 def load(data_type, date, accuracy, save_freq=False):
     try:
         conn = get_db_connection()
@@ -93,6 +102,7 @@ def load(data_type, date, accuracy, save_freq=False):
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
+                df = preprocess(df)
                 cur.close()
                 conn.close()
                 return df, agg_mode, agg_interval, end_date
@@ -202,8 +212,6 @@ def predict_with_freedman_diaconis_estimator():
 
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    df.set_index('timestamp', inplace=True)
     print("\nLoaded data:")
     print(df.tail())
 
@@ -238,12 +246,7 @@ def predict_with_exponential_smoothing():
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # load data
-    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, save_freq=True)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    print(df.to_string())
-    df.sort_index(inplace=True)
-    series = TimeSeries.from_dataframe(df, 'timestamp', 'data_value')
-    df.set_index('timestamp', inplace=True)
+    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
     print("\nLoaded data:")
     print(df.tail())
 
