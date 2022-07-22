@@ -101,11 +101,11 @@ def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_d
     return d
 
 
-@app.route('/v1/cleanAnomaly', methods=['POST'])
+@app.route('/v1/cleanAnomaly', methods=['DELETE'])
 def clean_anomaly():
     # receive data
-    json_df = request.get_json()
-    df = pd.read_json(json_df, orient='index')
+    json_request = request.get_json()
+    df = pd.read_json(json_request, orient='index')
     df.sort_index(inplace=True)
     df.rename_axis('timestamp', inplace=True)
     print("\nReceived DataFrame:")
@@ -119,9 +119,9 @@ def clean_anomaly():
     print(df.loc[df_anomaly['data_value'] == True].tail())
 
     # send clean data
-    df_no_anomaly = df.loc[df_anomaly['data_value'] == False]
-    json_no_anomaly = df_no_anomaly.to_json(orient='index')
-    return create_response(json_no_anomaly, 200)
+    df = df.loc[df_anomaly['data_value'] == False]
+    json_response = df.to_json(orient='index')
+    return create_response(json_response, 200)
 
 
 @app.route('/v1/detectAnomalyWithThreshold', methods=['POST'])

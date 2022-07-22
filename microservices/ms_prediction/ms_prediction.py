@@ -119,14 +119,14 @@ def load(data_type, date, accuracy):
 def clean_anomaly(df):
     try:
         url = ANOMALY_DETECTION_URL
-        json_df = df.to_json(orient='index')
-        response = requests.post(url, json=json_df)
+        json_request = df.to_json(orient='index')
+        response = requests.delete(url, json=json_request)
         response.raise_for_status()
-        json_no_anomaly = response.json()
-        df_no_anomaly = pd.read_json(json_no_anomaly, orient='index')
-        df_no_anomaly.sort_index(inplace=True)
-        df_no_anomaly.rename_axis('timestamp', inplace=True)
-        return df_no_anomaly
+        json_response = response.json()
+        df = pd.read_json(json_response, orient='index')
+        df.sort_index(inplace=True)
+        df.rename_axis('timestamp', inplace=True)
+        return df
     except HTTPError as http_err:
         logging.error(http_err)
         abort(400)
