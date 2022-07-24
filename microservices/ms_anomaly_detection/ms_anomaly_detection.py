@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import coloredlogs
 import pandas as pd
 import psycopg2
 from adtk.data import validate_series
@@ -50,8 +51,7 @@ def load(data_type, start_date=None, end_date=None):
             else:
                 query = f"SELECT data_value, timestamp" \
                         f" FROM {TABLE} WHERE data_type = '{data_type}' ORDER BY timestamp"
-            print("\nAnomaly query:")
-            print(query)
+            logging.debug(f"Anomaly query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
@@ -103,18 +103,18 @@ def clean_anomaly():
     df = pd.read_json(json_request, orient='index')
     df.sort_index(inplace=True)
     df.rename_axis('timestamp', inplace=True)
-    print("\nReceived DataFrame:")
-    print(df.tail())
+    logging.debug(f"Received data:\n{df.tail()}")
 
     # detect anomaly
     df = validate_series(df)
     esd_ad = GeneralizedESDTestAD()
     df_anomaly = esd_ad.fit_detect(df)
-    print("\nDetected anomaly:")
-    print(df.loc[df_anomaly['data_value'] == True].tail())
+    anomalies = df.loc[df_anomaly['data_value'] == True]
+    logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # send clean data
     df = df.loc[df_anomaly['data_value'] == False]
+    logging.info(f"Cleaned data:\n{df.tail()}")
     json_response = df.to_json(orient='index')
     return create_response(json_response, 200)
 
@@ -138,15 +138,13 @@ def detect_anomaly_with_threshold():
     # load data
     df, agg_mode, agg_interval = load(data_type, start_date=start_date, end_date=end_date)
     df = preprocess(df)
-    print("\nLoaded data:")
-    print(df.tail())
+    logging.debug(f"Loaded data:\n{df.tail()}")
 
     # detect anomaly
     threshold_ad = ThresholdAD(low=low, high=high)
     df_anomaly = threshold_ad.detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]
-    print("\nDetected anomaly:")
-    print(anomalies.tail())
+    logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # formulate an anomaly
     if anomalies.shape[0] != 0:
@@ -155,12 +153,9 @@ def detect_anomaly_with_threshold():
         anomaly_count = 0
     params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count,
                                 start_date=start_date, end_date=end_date)
-
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
-
-    print("\nAnomaly:")
-    print(anomaly)
+    logging.info(f"Anomaly:\n{anomaly}")
     return create_response(anomaly, 200)
 
 
@@ -172,17 +167,16 @@ def detect_anomaly():
     if data_type is None:
         abort(400)
 
+    # load data
     df, agg_mode, agg_interval = load(data_type)
     df = preprocess(df)
-    print("\nLoaded data:")
-    print(df.tail())
+    logging.debug(f"Loaded data:\n{df.tail()}")
 
     # detect anomaly
     esd_ad = GeneralizedESDTestAD()
     df_anomaly = esd_ad.fit_detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]
-    print("\nDetected anomaly:")
-    print(anomalies.tail())
+    logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # formulate an anomaly
     if anomalies.shape[0] != 0:
@@ -190,12 +184,9 @@ def detect_anomaly():
     else:
         anomaly_count = 0
     params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count)
-
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
-
-    print("\nAnomaly:")
-    print(anomaly)
+    logging.info(f"Anomaly:\n{anomaly}")
     return create_response(anomaly, 200)
 
 
@@ -209,4 +200,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT)
+    coloredlogs.install(level='DEBUG')
+    app.run(host='0.0.0.0', port=PORT, debug=True)

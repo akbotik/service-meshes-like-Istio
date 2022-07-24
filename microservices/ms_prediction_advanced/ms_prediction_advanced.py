@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import coloredlogs
 import numpy as np
 import pandas as pd
 import psycopg2
@@ -89,8 +90,7 @@ def load(data_type, date, accuracy, freq=False):
             agg_mode, agg_interval = cur.fetchone()
             start_date, end_date = get_daterange(agg_interval, date, accuracy)
             query = get_query(data_type, start_date, end_date, agg_interval, freq)
-            print("\nPrediction query:")
-            print(query)
+            logging.debug(f"Prediction query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
@@ -215,24 +215,21 @@ def predict_with_freedman_diaconis_estimator():
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, freq=True)
     df = preprocess(df)
-    print("\nLoaded data:")
-    print(df.tail())
+    logging.debug(f"Loaded data:\n{df.tail()}")
 
     # clean anomaly
     df_no_anomaly = clean_anomaly(df)
 
     # fill missing values
     df_missing_values = fill_missing_values(df_no_anomaly, end_date, agg_interval)
-    print("\nCleaned data with missing values:")
-    print(df_missing_values.tail())
+    logging.debug(f"Cleaned data with missing values:\n{df_missing_values.tail()}")
 
     # predict
     predicted_value = get_predicted_value(df_missing_values)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    print("\nPrediction:")
-    print(prediction)
+    logging.info(f"Prediction:\n{prediction}")
     return create_response(prediction, 200)
 
 
@@ -251,8 +248,7 @@ def predict_with_exponential_smoothing():
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
     ts = preprocess(df, transform=True)
-    print("\nLoaded data:")
-    print(ts.pd_dataframe().tail())
+    logging.debug(f"Loaded data:\n{ts.pd_dataframe().tail()}")
 
     # train a forecasting model
     model = ExponentialSmoothing(damped=True)
@@ -260,16 +256,14 @@ def predict_with_exponential_smoothing():
 
     # fill missing values
     ts_missing_values = fill_missing_values(ts, end_date, agg_interval, model=model)
-    print("\nData with missing values:")
-    print(ts_missing_values.pd_dataframe().tail())
+    logging.debug(f"Data with missing values:\n{ts_missing_values.pd_dataframe().tail()}")
 
     # predict
     predicted_value = get_predicted_value(ts_missing_values, model=model)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    print("\nPrediction:")
-    print(prediction)
+    logging.info(f"Prediction:\n{prediction}")
     return create_response(prediction, 200)
 
 
@@ -283,4 +277,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT)
+    coloredlogs.install(level='DEBUG')
+    app.run(host='0.0.0.0', port=PORT, debug=True)
