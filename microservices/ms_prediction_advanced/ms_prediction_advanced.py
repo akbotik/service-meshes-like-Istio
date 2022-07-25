@@ -8,12 +8,11 @@ import psycopg2
 import requests
 from darts import TimeSeries
 from darts.models import ExponentialSmoothing
-from darts.utils.utils import SeasonalityMode
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request
 from flask import jsonify, abort, make_response
-from requests.exceptions import HTTPError
 from prophet import Prophet
+from requests.exceptions import HTTPError
 
 app = Flask(__name__)
 PORT = 8086
@@ -343,4 +342,4 @@ def create_response(body, code):
 
 if __name__ == '__main__':
     coloredlogs.install(level='DEBUG')
-    app.run(host='0.0.0.0', port=PORT)
+    app.run(host='0.0.0.0', port=PORT, debug=True)
