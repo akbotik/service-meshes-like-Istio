@@ -198,14 +198,14 @@ def predict_with_freedman_diaconis_estimator():
     logging.debug(f"Loaded data:\n{df.tail()}")
 
     # clean anomaly
-    df_no_anomaly = clean_anomaly(df)
+    df = clean_anomaly(df)
 
     # fill missing values
-    df_missing_values = fill_missing_values(df_no_anomaly, end_date, agg_interval)
-    logging.debug(f"Cleaned data with missing values:\n{df_missing_values.tail()}")
+    df = fill_missing_values(df, end_date, agg_interval)
+    logging.debug(f"Cleaned data with missing values:\n{df.tail()}")
 
     # predict
-    predicted_value = get_predicted_value(df_missing_values)
+    predicted_value = get_predicted_value(df)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)

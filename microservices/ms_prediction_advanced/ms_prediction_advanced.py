@@ -8,10 +8,12 @@ import psycopg2
 import requests
 from darts import TimeSeries
 from darts.models import ExponentialSmoothing
+from darts.utils.utils import SeasonalityMode
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request
 from flask import jsonify, abort, make_response
 from requests.exceptions import HTTPError
+from prophet import Prophet
 
 app = Flask(__name__)
 PORT = 8086
@@ -107,12 +109,14 @@ def load(data_type, date, accuracy, freq=False):
         abort(400)
 
 
-def preprocess(df, transform=False):
+def preprocess(df, transform=None):
     df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
     df.drop_duplicates(inplace=True)
-    df.sort_values(by=['timestamp'])
-    if transform:
+    df.sort_values(by=['timestamp'], inplace=True)
+    if transform == 'TimeSeries':
         s = TimeSeries.from_dataframe(df, 'timestamp', 'data_value')
+    elif transform == 'DataFrame':
+        s = df.rename(columns={'timestamp': 'ds', 'data_value': 'y'})
     else:
         s = df.set_index('timestamp')
     return s
@@ -148,7 +152,32 @@ def get_missing_date(last_date, end_date, agg_interval):
 
 
 def fill_missing_values(s, end_date, agg_interval, model=None):
-    if model is None:
+    if type(model).__name__ == 'ExponentialSmoothing':
+        last_date = s.end_time().to_pydatetime().date()
+        if last_date != end_date:
+            logging.error("Missing values cannot be filled")
+            abort(416)
+        # num_steps = 0
+        # while last_date != end_date:
+        #     missing_date = get_missing_date(last_date, end_date, agg_interval)
+        #     num_steps += 1
+        #     last_date = missing_date
+        # if num_steps > 0:
+        #     prediction = model.predict(num_steps)
+        #     s = s.concatenate(prediction, ignore_time_axes=True)
+    elif type(model).__name__ == 'Prophet':
+        last_date = s['ds'].iat[-1].date()
+        periods = 0
+        while last_date != end_date:
+            missing_date = get_missing_date(last_date, end_date, agg_interval)
+            periods += 1
+            last_date = missing_date
+        if periods > 0:
+            future = model.make_future_dataframe(periods=periods)
+            forecast = model.predict(future)
+            s = forecast[['ds', 'yhat']].copy()
+            s.rename(columns={'yhat': 'y'}, inplace=True)
+    else:
         last_date = s.index[-1].date()
         while last_date != end_date:
             missing_date = get_missing_date(last_date, end_date, agg_interval)
@@ -160,26 +189,20 @@ def fill_missing_values(s, end_date, agg_interval, model=None):
                     prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
                     s = pd.concat([s, prediction])
             last_date = missing_date
-    else:
-        last_date = s.end_time().to_pydatetime().date()
-        num_steps = 0
-        while last_date != end_date:
-            missing_date = get_missing_date(last_date, end_date, agg_interval)
-            num_steps += 1
-            last_date = missing_date
-        if num_steps > 0:
-            prediction = model.predict(num_steps)
-            s = s.concatenate(prediction, ignore_time_axes=True)
     return s
 
 
 def get_predicted_value(s, model=None):
-    if model is None:
+    if type(model).__name__ == 'ExponentialSmoothing':
+        predicted_value = model.predict(1).pd_dataframe()['data_value'].iat[-1]
+    elif type(model).__name__ == 'Prophet':
+        future = model.make_future_dataframe(periods=1)
+        forecast = model.predict(future)
+        predicted_value = forecast['yhat'].iat[-1]
+    else:
         arr = s['data_value'].to_numpy()
         hist, bins = np.histogram(arr, bins='fd')
         predicted_value = bins[hist.argmax()]
-    else:
-        predicted_value = model.predict(1).pd_dataframe()['data_value'].iat[-1]
     return predicted_value
 
 
@@ -218,14 +241,16 @@ def predict_with_freedman_diaconis_estimator():
     logging.debug(f"Loaded data:\n{df.tail()}")
 
     # clean anomaly
-    df_no_anomaly = clean_anomaly(df)
+    df = clean_anomaly(df)
 
     # fill missing values
-    df_missing_values = fill_missing_values(df_no_anomaly, end_date, agg_interval)
-    logging.debug(f"Cleaned data with missing values:\n{df_missing_values.tail()}")
+    old_size = df.size
+    df = fill_missing_values(df, end_date, agg_interval)
+    if df.size != old_size:
+        logging.debug(f"Cleaned data with missing values:\n{df.tail()}")
 
     # predict
-    predicted_value = get_predicted_value(df_missing_values)
+    predicted_value = get_predicted_value(df)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
@@ -247,19 +272,59 @@ def predict_with_exponential_smoothing():
 
     # load data
     df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
-    ts = preprocess(df, transform=True)
+    ts = preprocess(df, transform='TimeSeries')
     logging.debug(f"Loaded data:\n{ts.pd_dataframe().tail()}")
 
     # train a forecasting model
-    model = ExponentialSmoothing(damped=True)
-    model.fit(ts)
+    m = ExponentialSmoothing(damped=True)
+    m.fit(ts)
 
     # fill missing values
-    ts_missing_values = fill_missing_values(ts, end_date, agg_interval, model=model)
-    logging.debug(f"Data with missing values:\n{ts_missing_values.pd_dataframe().tail()}")
+    ts = fill_missing_values(ts, end_date, agg_interval, model=m)
+    # logging.debug(f"Data with missing values:\n{ts.pd_dataframe().tail()}")
 
     # predict
-    predicted_value = get_predicted_value(ts_missing_values, model=model)
+    predicted_value = get_predicted_value(ts, model=m)
+
+    # formulate a prediction
+    prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+    logging.info(f"Prediction:\n{prediction}")
+    return create_response(prediction, 200)
+
+
+@app.route('/v1/predictWithProphet', methods=['POST'])
+def predict_with_prophet():
+    json = request.get_json()
+    data_type = json['type']
+    date = json['date']
+    accuracy = json['accuracy']
+
+    if (data_type is None) or (date is None) or (accuracy is None):
+        abort(400)
+
+    date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+
+    # load data
+    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, freq=True)
+    df = preprocess(df, transform='DataFrame')
+    df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
+    df_renamed.set_index('timestamp', inplace=True)
+    logging.debug(f"Loaded data:\n{df_renamed.tail()}")
+
+    # train a forecasting model
+    m = Prophet()
+    m.fit(df)
+
+    # fill missing values
+    old_size = df.size
+    df = fill_missing_values(df, end_date, agg_interval, model=m)
+    df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
+    df_renamed.set_index('timestamp', inplace=True)
+    if df.size != old_size:
+        logging.debug(f"Data with missing values:\n{df_renamed.tail()}")
+
+    # predict
+    predicted_value = get_predicted_value(df, model=m)
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
@@ -278,4 +343,4 @@ def create_response(body, code):
 
 if __name__ == '__main__':
     coloredlogs.install(level='DEBUG')
-    app.run(host='0.0.0.0', port=PORT, debug=True)
+    app.run(host='0.0.0.0', port=PORT)
