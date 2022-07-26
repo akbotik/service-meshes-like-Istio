@@ -28,13 +28,13 @@ def get_db_connection():
 
 
 def get_query(data_type, start_date, end_date):
-    str_start_date = datetime.datetime.strftime(start_date, "%Y-%m-%d")
-    str_end_date = datetime.datetime.strftime(end_date, "%Y-%m-%d")
-
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
-            f" WHERE data_type = '{data_type}'" \
-            f" AND '[{str_start_date}, {str_end_date}]'::daterange @> timestamp" \
-            f" ORDER BY timestamp"
+            f" WHERE data_type = '{data_type}'"
+    if (start_date is not None) and (end_date is not None):
+        str_start_date = datetime.datetime.strftime(start_date, "%Y-%m-%d")
+        str_end_date = datetime.datetime.strftime(end_date, "%Y-%m-%d")
+        query = query + f" AND '[{str_start_date}, {str_end_date}]'::daterange @> timestamp"
+    query = query + f" ORDER BY timestamp"
     return query
 
 
@@ -46,11 +46,7 @@ def load(data_type, start_date=None, end_date=None):
                     f" FROM {TABLE} WHERE data_type = '{data_type}'")
         if cur.rowcount > 0:
             agg_mode, agg_interval = cur.fetchone()
-            if (start_date is not None) and (end_date is not None):
-                query = get_query(data_type, start_date, end_date)
-            else:
-                query = f"SELECT data_value, timestamp" \
-                        f" FROM {TABLE} WHERE data_type = '{data_type}' ORDER BY timestamp"
+            query = get_query(data_type, start_date, end_date)
             logging.debug(f"Anomaly query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
@@ -125,11 +121,11 @@ def detect_anomaly_with_threshold():
     data_type = json['type']
     start_date = json['start_date']
     end_date = json['end_date']
-    low = json['low']
-    high = json['high']
+    low_value = json['low_value']
+    high_value = json['high_value']
 
     if (data_type is None) or (start_date is None) or (end_date is None) \
-            or (low is None) or (high is None):
+            or (low_value is None) or (high_value is None):
         abort(400)
 
     start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -141,7 +137,7 @@ def detect_anomaly_with_threshold():
     logging.debug(f"Loaded data:\n{df.tail()}")
 
     # detect anomaly
-    threshold_ad = ThresholdAD(low=low, high=high)
+    threshold_ad = ThresholdAD(low=low_value, high=high_value)
     df_anomaly = threshold_ad.detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")

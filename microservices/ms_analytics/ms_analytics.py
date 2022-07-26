@@ -31,7 +31,12 @@ def estimate_errors(true_value, predicted_values):
 
 @app.route('/v1/assessPrediction', methods=['POST'])
 def assess_prediction():
+    """
+    Measure the mean squared error (MSE) of the predicted values.
+    Applicable only if the true value is known.
+    """
     json = request.get_json()
+    # date, type
     true_value = json['true_value']
     predicted_values = json['predicted_values']
 
@@ -47,6 +52,10 @@ def assess_prediction():
 
 @app.route('/v1/getAccurateValue', methods=['POST'])
 def get_accurate_value():
+    """
+    Return the most accurate value from the predicted values.
+    Applicable only if the true value is known.
+    """
     json = request.get_json()
     true_value = json['true_value']
     predicted_values = json['predicted_values']
