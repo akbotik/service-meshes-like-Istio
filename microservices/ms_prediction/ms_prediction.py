@@ -26,6 +26,15 @@ HIGH_ACCURACY = 'high'
 TABLE = 'aggregated_data'
 
 
+class Prediction:
+    def __init__(self, date, agg_mode, agg_interval, data_type, predicted_value):
+        self.date = date
+        self.agg_mode = agg_mode
+        self.agg_interval = agg_interval
+        self.data_type = data_type
+        self.predicted_value = predicted_value
+
+
 def get_db_connection():
     conn = psycopg2.connect(host='localhost',
                             database='postgres',
@@ -98,6 +107,7 @@ def load(data_type, date, accuracy):
                 logging.error("Not enough data to predict")
                 abort(400)
         else:
+            logging.error("No data of this type")
             abort(400)
     except (Exception, psycopg2.DatabaseError, psycopg2.OperationalError) as err:
         logging.error(err)
@@ -123,10 +133,7 @@ def clean_anomaly(df):
         df.sort_index(inplace=True)
         df.rename_axis('timestamp', inplace=True)
         return df
-    except HTTPError as http_err:
-        logging.error(http_err)
-        abort(400)
-    except Exception as err:
+    except (Exception, HTTPError) as err:
         logging.error(err)
         abort(400)
 
@@ -164,20 +171,16 @@ def get_predicted_value(df):
 
 
 def get_prediction(date, agg_mode, agg_interval, data_type, predicted_value):
-    d = {
-        'agg_mode': agg_mode,
-        'agg_interval': agg_interval,
-        'data_type': data_type,
-        'predicted_value': predicted_value
-    }
-
     if agg_interval == YEAR:
-        d['date'] = f"{date.year}"
+        date = get_last_day_of_year(date)
     elif agg_interval == MONTH:
-        d['date'] = f"{date.year}-{date.month}"
+        date = get_last_day_of_month(date)
     else:
-        d['date'] = f"{date}"
-    return d
+        date = date
+    date = datetime.datetime.strftime(date, "%Y-%m-%d")
+
+    prediction = Prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+    return vars(prediction)
 
 
 @app.route('/v1/predictWithFreedmanDiaconisEstimator', methods=['POST'])

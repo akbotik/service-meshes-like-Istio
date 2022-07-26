@@ -58,6 +58,7 @@ def load(data_type, start_date=None, end_date=None):
                 logging.error("Not enough data to detect")
                 abort(400)
         else:
+            logging.error("No data of this type")
             abort(400)
     except (Exception, psycopg2.DatabaseError, psycopg2.OperationalError) as err:
         logging.error(err)
