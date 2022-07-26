@@ -160,13 +160,17 @@ def fill_missing_values(df, end_date, agg_interval):
                 prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
                 df = pd.concat([df, prediction])
         last_date = missing_date
+    missing_date = get_missing_date(last_date, end_date, agg_interval)
+    arr = df['data_value'].to_numpy()
+    hist, bins = np.histogram(arr, bins='fd')
+    missing_value = (bins[hist.argmax()] + bins[hist.argmax() + 1]) / 2
+    prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
+    df = pd.concat([df, prediction])
     return df
 
 
 def get_predicted_value(df):
-    arr = df['data_value'].to_numpy()
-    hist, bins = np.histogram(arr, bins='fd')
-    predicted_value = bins[hist.argmax()]
+    predicted_value = df['data_value'].iat[-1]
     return predicted_value
 
 
@@ -204,8 +208,10 @@ def predict_with_freedman_diaconis_estimator():
     df = clean_anomaly(df)
 
     # fill missing values
+    old_size = df.size
     df = fill_missing_values(df, end_date, agg_interval)
-    logging.debug(f"Cleaned data with missing values:\n{df.tail()}")
+    if df.size != old_size:
+        logging.debug(f"Cleaned data with missing values:\n{df.tail()}")
 
     # predict
     predicted_value = get_predicted_value(df)

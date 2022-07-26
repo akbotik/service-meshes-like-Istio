@@ -90,18 +90,27 @@ def cast_to_list(x):
         abort(400)
 
 
+def extract_predicted_values(predictions):
+    predicted_values = []
+    for predicted_value in predicted_values:
+        predicted_values.append(predicted_value)
+    return predicted_values
+
+
 def estimate_errors(true_value, predictions):
-    df = pd.DataFrame(columns=['Error'], index=predictions)
+    predicted_values = extract_predicted_values(predictions)
+    df = pd.DataFrame(columns=['Error'], index=predicted_values)
+    df.rename_axis('predicted_value', inplace=True)
     for prediction in predictions:
         error = mean_squared_error(cast_to_list(true_value), cast_to_list(prediction.predicted_value))
-        df.loc[prediction] = error
+        df.loc[prediction.predicted_value] = error
     return df
 
 
 @app.route('/v1/assessPrediction', methods=['POST'])
 def assess_prediction():
     """
-    Accept predictions as dictionaries.
+    Accept predictions with the same parameters as dictionaries.
     Measure the mean squared error (MSE) of the predicted values.
     Return JSON object of DataFrame with assessments.
     Applicable only if the true value is known.
@@ -119,13 +128,13 @@ def assess_prediction():
     logging.debug(f"True value:\n{true_value}")
     df = estimate_errors(true_value, predictions)
     logging.info(f"Estimated_errors:\n{df}")
-    return create_response(df.to_json(orient="columns"), 200)
+    return create_response(df.to_json(orient="index"), 200)
 
 
 @app.route('/v1/getAccurateValue', methods=['POST'])
 def get_accurate_value():
     """
-    Accept predictions as dictionaries.
+    Accept predictions with the same parameters as dictionaries.
     Measure the mean squared error (MSE) of the predicted values.
     Return the most accurate value from the predicted values.
     Applicable only if the true value is known.
@@ -144,7 +153,7 @@ def get_accurate_value():
     df = estimate_errors(true_value, predictions)
     df.sort_values(by=['Error'], inplace=True)
     logging.debug(f"Estimated_errors:\n{df}")
-    accurate_value = df.first_valid_index().predicted_value
+    accurate_value = df.first_valid_index()
     logging.info(f"The most accurate value:\n{accurate_value}")
     return create_response(accurate_value, 200)
 

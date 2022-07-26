@@ -160,20 +160,17 @@ def get_missing_date(last_date, end_date, agg_interval):
 def fill_missing_values(s, end_date, agg_interval, model=None):
     if type(model).__name__ == 'ExponentialSmoothing':
         last_date = s.end_time().to_pydatetime().date()
-        if last_date != end_date:
-            logging.error("Missing values cannot be filled")
-            abort(416)
-        # num_steps = 0
-        # while last_date != end_date:
-        #     missing_date = get_missing_date(last_date, end_date, agg_interval)
-        #     num_steps += 1
-        #     last_date = missing_date
-        # if num_steps > 0:
-        #     prediction = model.predict(num_steps)
-        #     s = s.concatenate(prediction, ignore_time_axes=True)
+        num_steps = 1
+        while last_date != end_date:
+            missing_date = get_missing_date(last_date, end_date, agg_interval)
+            num_steps += 1
+            last_date = missing_date
+        if num_steps > 0:
+            prediction = model.predict(num_steps)
+            s = s.concatenate(prediction, ignore_time_axes=True)
     elif type(model).__name__ == 'Prophet':
         last_date = s['ds'].iat[-1].date()
-        periods = 0
+        periods = 1
         while last_date != end_date:
             missing_date = get_missing_date(last_date, end_date, agg_interval)
             periods += 1
@@ -182,7 +179,6 @@ def fill_missing_values(s, end_date, agg_interval, model=None):
             future = model.make_future_dataframe(periods=periods)
             forecast = model.predict(future)
             s = forecast[['ds', 'yhat']].copy()
-            s.rename(columns={'yhat': 'y'}, inplace=True)
     else:
         last_date = s.index[-1].date()
         while last_date != end_date:
@@ -195,20 +191,22 @@ def fill_missing_values(s, end_date, agg_interval, model=None):
                     prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
                     s = pd.concat([s, prediction])
             last_date = missing_date
+        missing_date = get_missing_date(last_date, end_date, agg_interval)
+        arr = s['data_value'].to_numpy()
+        hist, bins = np.histogram(arr, bins='fd')
+        missing_value = (bins[hist.argmax()] + bins[hist.argmax() + 1]) / 2
+        prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
+        s = pd.concat([s, prediction])
     return s
 
 
 def get_predicted_value(s, model=None):
     if type(model).__name__ == 'ExponentialSmoothing':
-        predicted_value = model.predict(1).pd_dataframe()['data_value'].iat[-1]
+        predicted_value = s.last_value()
     elif type(model).__name__ == 'Prophet':
-        future = model.make_future_dataframe(periods=1)
-        forecast = model.predict(future)
-        predicted_value = forecast['yhat'].iat[-1]
+        predicted_value = s['yhat'].iat[-1]
     else:
-        arr = s['data_value'].to_numpy()
-        hist, bins = np.histogram(arr, bins='fd')
-        predicted_value = bins[hist.argmax()]
+        predicted_value = s['data_value'].iat[-1]
     return predicted_value
 
 
@@ -282,8 +280,10 @@ def predict_with_exponential_smoothing():
     m.fit(ts)
 
     # fill missing values
+    old_size = ts.duration
     ts = fill_missing_values(ts, end_date, agg_interval, model=m)
-    # logging.debug(f"Data with missing values:\n{ts.pd_dataframe().tail()}")
+    if ts.duration != old_size:
+        logging.debug(f"Data with missing values:\n{ts.pd_dataframe().tail()}")
 
     # predict
     predicted_value = get_predicted_value(ts, model=m)
@@ -320,7 +320,7 @@ def predict_with_prophet():
     # fill missing values
     old_size = df.size
     df = fill_missing_values(df, end_date, agg_interval, model=m)
-    df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
+    df_renamed = df.rename(columns={'ds': 'timestamp', 'yhat': 'data_value'})
     df_renamed.set_index('timestamp', inplace=True)
     if df.size != old_size:
         logging.debug(f"Data with missing values:\n{df_renamed.tail()}")
