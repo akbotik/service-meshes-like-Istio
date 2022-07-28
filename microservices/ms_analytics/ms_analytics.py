@@ -92,18 +92,17 @@ def cast_to_list(x):
 
 def extract_predicted_values(predictions):
     predicted_values = []
-    for predicted_value in predicted_values:
-        predicted_values.append(predicted_value)
+    for prediction in predictions:
+        predicted_values.append(prediction.predicted_value)
     return predicted_values
 
 
 def estimate_errors(true_value, predictions):
-    predicted_values = extract_predicted_values(predictions)
-    df = pd.DataFrame(columns=['Error'], index=predicted_values)
-    df.rename_axis('predicted_value', inplace=True)
+    df = pd.DataFrame(columns=['Predicted value', 'Error'], index=predictions)
+    df.rename_axis('Prediction', inplace=True)
     for prediction in predictions:
         error = mean_squared_error(cast_to_list(true_value), cast_to_list(prediction.predicted_value))
-        df.loc[prediction.predicted_value] = error
+        df.loc[prediction] = [prediction.predicted_value, error]
     return df
 
 
@@ -153,7 +152,7 @@ def get_accurate_value():
     df = estimate_errors(true_value, predictions)
     df.sort_values(by=['Error'], inplace=True)
     logging.debug(f"Estimated_errors:\n{df}")
-    accurate_value = df.first_valid_index()
+    accurate_value = df['Predicted value'].iat[0]
     logging.info(f"The most accurate value:\n{accurate_value}")
     return create_response(accurate_value, 200)
 
