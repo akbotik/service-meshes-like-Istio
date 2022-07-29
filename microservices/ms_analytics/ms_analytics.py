@@ -1,14 +1,12 @@
-import logging
 import datetime
 import itertools
-
-import psycopg2
+import logging
+import thresholds
 import coloredlogs
 import pandas as pd
-import requests as requests
+import psycopg2
 from flask import Flask, request
 from flask import jsonify, abort, make_response
-from requests.exceptions import HTTPError
 from sklearn.metrics import mean_squared_error
 
 app = Flask(__name__)
@@ -18,12 +16,12 @@ TABLE = 'aggregated_data'
 
 
 class Prediction(object):
-    def __init__(self, dict_prediction):
-        self.date = dict_prediction['date']
-        self.agg_mode = dict_prediction['agg_mode']
-        self.agg_interval = dict_prediction['agg_interval']
-        self.data_type = dict_prediction['data_type']
-        self.predicted_value = dict_prediction['predicted_value']
+    def __init__(self, dt_prediction):
+        self.date = dt_prediction['date']
+        self.agg_mode = dt_prediction['agg_mode']
+        self.agg_interval = dt_prediction['agg_interval']
+        self.data_type = dt_prediction['data_type']
+        self.predicted_value = dt_prediction['predicted_value']
 
 
 def get_db_connection():
@@ -34,11 +32,11 @@ def get_db_connection():
     return conn
 
 
-def get_predictions(dict_predictions):
+def get_predictions(dt_predictions):
     try:
         predictions = []
-        for dict_prediction in dict_predictions:
-            predictions.append(Prediction(dict_prediction))
+        for dt_prediction in dt_predictions:
+            predictions.append(Prediction(dt_prediction))
         return predictions
     except (Exception, KeyError) as err:
         logging.error(err)
@@ -46,6 +44,9 @@ def get_predictions(dict_predictions):
 
 
 def validate_prediction_params(predictions):
+    if not predictions:
+        logging.error("Predictions are empty")
+        abort(400)
     for p1, p2 in itertools.combinations(predictions, 2):
         if (p1.date != p2.date) or (p1.agg_mode != p2.agg_mode) or \
                 (p1.agg_interval != p2.agg_interval) or (p1.data_type != p2.data_type):
@@ -108,21 +109,32 @@ def extract_predicted_values(predictions):
     return predicted_values
 
 
-def get_thresholds():
-    thresholds = {'low': 30, 'high': 35}
-    return thresholds
+def get_thresholds(date, agg_mode, agg_interval, data_type):
+    if data_type == thresholds.PRESSURE:
+        return thresholds.get_pressure_thresholds()
+    elif data_type == thresholds.TEMPERATURE:
+        if agg_interval == thresholds.YEAR:
+            return thresholds.get_temperature_thresholds_for_year()
+        elif (agg_interval == thresholds.MONTH) or (agg_interval == thresholds.DAY):
+            return thresholds.get_temperature_thresholds_for_month(date.month)
+        else:
+            logging.error("Unknown aggregation interval")
+            abort(400)
+    else:
+        logging.error("Unknown data type")
+        abort(400)
 
 
-def is_valid(predicted_value, thresholds):
-    return thresholds['low'] <= predicted_value <= thresholds['high']
+def is_valid(predicted_value, dt_thresholds):
+    return dt_thresholds['low'] <= predicted_value <= dt_thresholds['high']
 
 
-def check_predictions(predictions, thresholds):
-    df = pd.DataFrame(columns=['predicted_value'], index=predictions)
+def check_predictions(predictions, dt_thresholds):
+    df = pd.DataFrame(columns=['predicted_value', 'valid'], index=predictions)
     df.rename_axis('prediction', inplace=True)
     for prediction in predictions:
-        label = is_valid(prediction.predicted_value, thresholds)
-        df.loc[prediction] = [label]
+        valid = is_valid(prediction.predicted_value, dt_thresholds)
+        df.loc[prediction] = [prediction.predicted_value, valid]
     return df
 
 
@@ -131,40 +143,48 @@ def assess_prediction():
     """
     Accept predictions as dictionaries with the same parameters.
     Measure the mean squared error (MSE) of the predicted values.
-    Return JSON object of DataFrame with assessments.
+    Return assessed predictions.
     Applicable only if the true value is known.
     """
     json = request.get_json()
-    dict_predictions = json['predictions']
+    dt_predictions = json['predictions']
 
-    if dict_predictions is None:
+    if (dt_predictions is None) or not dt_predictions:
         abort(400)
 
-    predictions = get_predictions(dict_predictions)
+    predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
     true_value = load_true_value(date, agg_mode, agg_interval, data_type)
     logging.debug(f"True value:\n{true_value}")
     df = estimate_errors(true_value, predictions)
-    logging.info(f"Estimated errors:\n{df}")
-    return create_response(df.to_json(orient="index"), 200)
+    logging.debug(f"Estimated errors:\n{df}")
+    dt_predictions.clear()
+    predictions.clear()
+    for prediction, row in df.iterrows():
+        dt_prediction = vars(prediction)
+        dt_prediction['error'] = row['error']
+        predictions.append(dt_prediction)
+    dt_predictions = {'predictions': predictions}
+    logging.info(f"Assessed predictions:\n{dt_predictions}")
+    return create_response(dt_predictions, 200)
 
 
-@app.route('/v1/getAccurateValue', methods=['POST'])
-def get_accurate_value():
+@app.route('/v1/getAccuratePrediction', methods=['POST'])
+def get_accurate_prediction():
     """
     Accept predictions as dictionaries with the same parameters.
     Measure the mean squared error (MSE) of the predicted values.
-    Return the most accurate value from the predicted values.
+    Return the most accurate prediction.
     Applicable only if the true value is known.
     """
     json = request.get_json()
-    dict_predictions = json['predictions']
+    dt_predictions = json['predictions']
 
-    if dict_predictions is None:
+    if (dt_predictions is None) or not dt_predictions:
         abort(400)
 
-    predictions = get_predictions(dict_predictions)
+    predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
     true_value = load_true_value(date, agg_mode, agg_interval, data_type)
@@ -172,9 +192,9 @@ def get_accurate_value():
     df = estimate_errors(true_value, predictions)
     df.sort_values(by=['error'], inplace=True)
     logging.debug(f"Estimated errors:\n{df}")
-    accurate_value = df['predicted_value'].iat[0]
-    logging.info(f"The most accurate value:\n{accurate_value}")
-    return create_response(accurate_value, 200)
+    dt_prediction = vars(df.first_valid_index())
+    logging.info(f"The most accurate value:\n{dt_prediction}")
+    return create_response(dt_prediction, 200)
 
 
 @app.route('/v1/getValidPredictions', methods=['DELETE'])
@@ -182,28 +202,31 @@ def get_valid_predictions():
     """
     Accept predictions as dictionaries with the same parameters.
     Examine predicted values against the expected thresholds.
-    Return JSON object of DataFrame with valid predictions.
+    Return valid predictions.
     No true value is required.
     """
     json = request.get_json()
-    dict_predictions = json['predictions']
+    dt_predictions = json['predictions']
 
-    if dict_predictions is None:
+    if (dt_predictions is None) or not dt_predictions:
         abort(400)
 
-    predictions = get_predictions(dict_predictions)
+    predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
-    data = {'prediction': predictions,
-            'predicted_value': extract_predicted_values(predictions)}
-    df = pd.DataFrame(data)
-    df.set_index('prediction', inplace=True)
-    logging.debug(f"Received data:\n{df.tail()}")
-    thresholds = get_thresholds()
-    logging.debug(f"Expected thresholds:\n[{thresholds['low']}, {thresholds['high']}]")
-    df_labels = check_predictions(predictions, thresholds)
-    df = df.loc[df_labels['predicted_value'] == True]
-    logging.info(f"Valid predictions:\n{df}")
-    return create_response(df.to_json(orient="index"), 200)
+    date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
+    dt_thresholds = get_thresholds(date, agg_mode, agg_interval, data_type)
+    logging.debug(f"Expected thresholds:\n[{dt_thresholds['low']}, {dt_thresholds['high']}]")
+    df = check_predictions(predictions, dt_thresholds)
+    logging.debug(f"Checked predictions:\n{df}")
+    dt_predictions.clear()
+    predictions.clear()
+    for prediction, row in df.iterrows():
+        if row['valid']:
+            dt_prediction = vars(prediction)
+            predictions.append(dt_prediction)
+    dt_predictions = {'predictions': predictions}
+    logging.info(f"Valid predictions:\n{dt_predictions}")
+    return create_response(dt_predictions, 200)
 
 
 def create_response(body, code):
