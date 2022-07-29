@@ -1,6 +1,8 @@
 package at.ac.univie.iot.data;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,8 +19,6 @@ public class GeneratorParameters {
     // pressure deviation, not anomaly
     public static final int PRESSURE_RANGE_FOR_ONE_DAY = 15;
     public static final int PRESSURE_RANGE_FOR_ONE_HOUR = 3;
-    // anomaly
-    public static final int PRESSURE_ANOMALY = 100;
     // how often anomaly should occur
     public static final int PRESSURE_ANOMALY_FREQUENCY = 50;
 
@@ -26,8 +26,6 @@ public class GeneratorParameters {
     // temperature deviation, not anomaly
     public static final int TEMPERATURE_RANGE_FOR_ONE_DAY = 10;
     public static final int TEMPERATURE_RANGE_FOR_ONE_HOUR = 1;
-    // anomaly
-    public static final int TEMPERATURE_ANOMALY = -100;
     // how often anomaly should occur
     public static final int TEMPERATURE_ANOMALY_FREQUENCY = 30;
 
@@ -46,6 +44,12 @@ public class GeneratorParameters {
         put(10, -15.0);
         put(11, -20.0);
     }};
+
+    // anomaly
+    public static final List<Integer> ANOMALY = new ArrayList<>() {{
+        add(-100);
+        add(100);
+    } };
 
     public static final String ROUNDING = "%.2f";
 

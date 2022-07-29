@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Random;
 
 import static at.ac.univie.iot.data.GeneratorParameters.*;
 
@@ -41,7 +42,8 @@ public class TemperatureSimulator implements ISimulator {
     public double getRandomAverageValueForOneDay(double avgValueForCurrentMonth) {
         double randomTemperature;
         if (shouldGenerateAnomaly(TEMPERATURE_ANOMALY_FREQUENCY)) {
-            randomTemperature = generateRandomValue(avgValueForCurrentMonth + TEMPERATURE_ANOMALY,
+            int randomAnomaly = ANOMALY.get(new Random().nextInt(ANOMALY.size()));
+            randomTemperature = generateRandomValue(avgValueForCurrentMonth + randomAnomaly,
                     TEMPERATURE_RANGE_FOR_ONE_DAY);
         } else {
             randomTemperature = generateRandomValue(avgValueForCurrentMonth, TEMPERATURE_RANGE_FOR_ONE_DAY);
