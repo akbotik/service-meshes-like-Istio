@@ -93,27 +93,35 @@ def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_d
     return d
 
 
-@app.route('/v1/cleanAnomaly', methods=['DELETE'])
-def clean_anomaly():
-    # receive data
-    json_request = request.get_json()
-    df = pd.read_json(json_request, orient='index')
-    df.sort_index(inplace=True)
-    df.rename_axis('timestamp', inplace=True)
-    logging.debug(f"Received data:\n{df.tail()}")
+@app.route('/v1/detectAnomaly', methods=['POST'])
+def detect_anomaly():
+    json = request.get_json()
+    data_type = json['type']
+
+    if data_type is None:
+        abort(400)
+
+    # load data
+    df, agg_mode, agg_interval = load(data_type)
+    df = preprocess(df)
+    logging.debug(f"Loaded data:\n{df.tail()}")
 
     # detect anomaly
-    df = validate_series(df)
     esd_ad = GeneralizedESDTestAD()
     df_anomaly = esd_ad.fit_detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
-    # send clean data
-    df = df.loc[df_anomaly['data_value'] == False]
-    logging.info(f"Cleaned data:\n{df.tail()}")
-    json_response = df.to_json(orient='index')
-    return create_response(json_response, 200)
+    # formulate an anomaly
+    if anomalies.shape[0] != 0:
+        anomaly_count = df_anomaly.value_counts()[True].item()
+    else:
+        anomaly_count = 0
+    params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count)
+    anomaly = {'params': params,
+               'anomalies': anomalies.to_json(orient='index')}
+    logging.info(f"Anomaly:\n{anomaly}")
+    return create_response(anomaly, 200)
 
 
 @app.route('/v1/detectAnomalyWithThreshold', methods=['POST'])
@@ -156,35 +164,27 @@ def detect_anomaly_with_threshold():
     return create_response(anomaly, 200)
 
 
-@app.route('/v1/detectAnomaly', methods=['POST'])
-def detect_anomaly():
-    json = request.get_json()
-    data_type = json['type']
-
-    if data_type is None:
-        abort(400)
-
-    # load data
-    df, agg_mode, agg_interval = load(data_type)
-    df = preprocess(df)
-    logging.debug(f"Loaded data:\n{df.tail()}")
+@app.route('/v1/cleanAnomaly', methods=['DELETE'])
+def clean_anomaly():
+    # receive data
+    json_request = request.get_json()
+    df = pd.read_json(json_request, orient='index')
+    df.sort_index(inplace=True)
+    df.rename_axis('timestamp', inplace=True)
+    logging.debug(f"Received data:\n{df.tail()}")
 
     # detect anomaly
+    df = validate_series(df)
     esd_ad = GeneralizedESDTestAD()
     df_anomaly = esd_ad.fit_detect(df)
     anomalies = df.loc[df_anomaly['data_value'] == True]
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
-    # formulate an anomaly
-    if anomalies.shape[0] != 0:
-        anomaly_count = df_anomaly.value_counts()[True].item()
-    else:
-        anomaly_count = 0
-    params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count)
-    anomaly = {'params': params,
-               'anomalies': anomalies.to_json(orient='index')}
-    logging.info(f"Anomaly:\n{anomaly}")
-    return create_response(anomaly, 200)
+    # send clean data
+    df = df.loc[df_anomaly['data_value'] == False]
+    logging.info(f"Cleaned data:\n{df.tail()}")
+    json_response = df.to_json(orient='index')
+    return create_response(json_response, 200)
 
 
 def create_response(body, code):
