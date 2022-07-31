@@ -31,11 +31,11 @@ TABLE = 'aggregated_data'
 
 class Prediction:
     def __init__(self, date, agg_mode, agg_interval, data_type, predicted_value):
-        self.date = date
-        self.agg_mode = agg_mode
-        self.agg_interval = agg_interval
-        self.data_type = data_type
-        self.predicted_value = predicted_value
+        self.date = date                        # string
+        self.agg_mode = agg_mode                # string
+        self.agg_interval = agg_interval        # string
+        self.data_type = data_type              # string
+        self.predicted_value = predicted_value  # float
 
 
 def get_db_connection():

@@ -17,11 +17,11 @@ TABLE = 'aggregated_data'
 
 class Prediction(object):
     def __init__(self, dt_prediction):
-        self.date = dt_prediction['date']
-        self.agg_mode = dt_prediction['agg_mode']
-        self.agg_interval = dt_prediction['agg_interval']
-        self.data_type = dt_prediction['data_type']
-        self.predicted_value = dt_prediction['predicted_value']
+        self.date = dt_prediction['date']                       # string
+        self.agg_mode = dt_prediction['agg_mode']               # string
+        self.agg_interval = dt_prediction['agg_interval']       # string
+        self.data_type = dt_prediction['data_type']             # string
+        self.predicted_value = dt_prediction['predicted_value'] # float
 
 
 def get_db_connection():
