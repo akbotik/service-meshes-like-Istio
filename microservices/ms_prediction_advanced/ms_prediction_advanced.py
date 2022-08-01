@@ -223,7 +223,6 @@ def get_prediction(date, agg_mode, agg_interval, data_type, predicted_value):
     return vars(prediction)
 
 
-@app.route('/v1/predictWithFreedmanDiaconisEstimator', methods=['POST'])
 def predict_with_freedman_diaconis_estimator():
     json = request.get_json()
     data_type = json['type']
@@ -254,11 +253,10 @@ def predict_with_freedman_diaconis_estimator():
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    logging.info(f"Prediction:\n{prediction}")
-    return create_response(prediction, 200)
+    logging.info(f"Predicted with Freedman Diaconis Estimator:\n{prediction}")
+    return prediction
 
 
-@app.route('/v1/predictWithExponentialSmoothing', methods=['POST'])
 def predict_with_exponential_smoothing():
     json = request.get_json()
     data_type = json['type']
@@ -290,11 +288,10 @@ def predict_with_exponential_smoothing():
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    logging.info(f"Prediction:\n{prediction}")
-    return create_response(prediction, 200)
+    logging.info(f"Predicted with Exponential Smoothing:\n{prediction}")
+    return prediction
 
 
-@app.route('/v1/predictWithProphet', methods=['POST'])
 def predict_with_prophet():
     json = request.get_json()
     data_type = json['type']
@@ -330,7 +327,23 @@ def predict_with_prophet():
 
     # formulate a prediction
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    logging.info(f"Prediction:\n{prediction}")
+    logging.info(f"Predicted with Prophet:\n{prediction}")
+    return prediction
+
+
+@app.route('/v1/predict', methods=['POST'])
+def predict():
+    prediction_model = request.args.get('predictionModel')
+
+    if prediction_model == 'ExponentialSmoothing':
+        logging.info(f"* Predicting with Exponential Smoothing")
+        prediction = predict_with_exponential_smoothing()
+    elif prediction_model == 'Prophet':
+        logging.info(f"* Predicting with Prophet")
+        prediction = predict_with_prophet()
+    else:
+        logging.info(f"* Predicting with Freedman Diaconis Estimator")
+        prediction = predict_with_freedman_diaconis_estimator()
     return create_response(prediction, 200)
 
 

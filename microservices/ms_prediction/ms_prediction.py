@@ -187,8 +187,8 @@ def get_prediction(date, agg_mode, agg_interval, data_type, predicted_value):
     return vars(prediction)
 
 
-@app.route('/v1/predictWithFreedmanDiaconisEstimator', methods=['POST'])
-def predict_with_freedman_diaconis_estimator():
+@app.route('/v1/predict', methods=['POST'])
+def predict():
     json = request.get_json()
     data_type = json['type']
     date = json['date']

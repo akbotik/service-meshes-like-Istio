@@ -73,28 +73,22 @@ def preprocess(df):
 
 
 def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
-    d = {
-        'agg_mode': agg_mode,
-        'agg_interval': agg_interval,
-        'data_type': data_type,
-        'anomaly_count': anomaly_count
-    }
+    dt = dict(agg_mode=agg_mode, agg_interval=agg_interval, data_type=data_type, anomaly_count=anomaly_count)
 
     if (start_date is not None) and (end_date is not None):
         if agg_interval == YEAR:
-            d['start_date'] = f"{start_date.year}"
-            d['end_date'] = f"{end_date.year}"
+            dt['start_date'] = f"{start_date.year}"
+            dt['end_date'] = f"{end_date.year}"
         elif agg_interval == MONTH:
-            d['start_date'] = f"{start_date.year}-{start_date.month}"
-            d['end_date'] = f"{end_date.year}-{end_date.month}"
+            dt['start_date'] = f"{start_date.year}-{start_date.month}"
+            dt['end_date'] = f"{end_date.year}-{end_date.month}"
         else:
-            d['start_date'] = f"{start_date}"
-            d['end_date'] = f"{end_date}"
-    return d
+            dt['start_date'] = f"{start_date}"
+            dt['end_date'] = f"{end_date}"
+    return dt
 
 
-@app.route('/v1/detectAnomaly', methods=['POST'])
-def detect_anomaly():
+def detect():
     json = request.get_json()
     data_type = json['type']
 
@@ -121,11 +115,10 @@ def detect_anomaly():
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
     logging.info(f"Anomaly:\n{anomaly}")
-    return create_response(anomaly, 200)
+    return anomaly
 
 
-@app.route('/v1/detectAnomalyWithThreshold', methods=['POST'])
-def detect_anomaly_with_threshold():
+def detect_with_thresholds():
     json = request.get_json()
     data_type = json['type']
     start_date = json['start_date']
@@ -161,6 +154,20 @@ def detect_anomaly_with_threshold():
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
     logging.info(f"Anomaly:\n{anomaly}")
+    return anomaly
+
+
+@app.route('/v1/detectAnomaly', methods=['POST'])
+def detect_anomaly():
+    thresholds = request.args.get('thresholds')
+
+    if thresholds == 'True':
+        logging.info(f"* Detecting with thresholds")
+        anomaly = detect_with_thresholds()
+    else:
+        logging.info(f"* Detecting")
+        anomaly = detect()
+
     return create_response(anomaly, 200)
 
 
