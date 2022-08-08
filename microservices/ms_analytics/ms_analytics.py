@@ -146,6 +146,7 @@ def assess_predictions():
     Measure the mean squared error (MSE) of the predicted values.
     Return assessed predictions.
     Applicable only if the true value is known.
+    A 200 OK response indicates that the intended action was successful.
     """
     json = request.get_json()
     dt_predictions = json['predictions']
@@ -180,6 +181,7 @@ def get_accurate_prediction():
     Measure the mean squared error (MSE) of the predicted values.
     Return the most accurate prediction.
     Applicable only if the true value is known.
+    A 200 OK response indicates that the intended action was successful.
     """
     json = request.get_json()
     dt_predictions = json['predictions']
@@ -209,6 +211,7 @@ def get_valid_predictions():
     Examine predicted values against the expected thresholds.
     Return valid predictions.
     No true value is required.
+    A 200 OK response indicates that the intended action was successful.
     """
     json = request.get_json()
     dt_predictions = json['predictions']
