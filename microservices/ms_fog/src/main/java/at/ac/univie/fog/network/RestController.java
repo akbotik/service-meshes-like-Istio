@@ -24,7 +24,7 @@ public class RestController {
     private ESensor dataType;
 
     @PostMapping("/aggregateSensorData")
-    public ResponseEntity<String> getSensorData(@RequestBody SensorData sensorData) {
+    public ResponseEntity<String> aggregateSensorData(@RequestBody SensorData sensorData) {
         if (sensorData.getSensorType() != dataType) {
             return new ResponseEntity<>("NOK", HttpStatus.BAD_REQUEST);
         }
