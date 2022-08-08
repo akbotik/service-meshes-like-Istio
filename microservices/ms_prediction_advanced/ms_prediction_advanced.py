@@ -68,7 +68,7 @@ def get_daterange(agg_interval, date, accuracy):
         end_date = date - relativedelta(days=1)
 
     if accuracy == LOW_ACCURACY:
-        start_date = end_date - relativedelta(years=2)
+        start_date = end_date - relativedelta(years=10)
     else:
         start_date = datetime.datetime(1971, 1, 1)
     return start_date, end_date
@@ -120,7 +120,7 @@ def load(data_type, date, accuracy, freq=False):
 
 def preprocess(df, transform=None):
     df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    df.drop_duplicates(inplace=True)
+    df.drop_duplicates(subset=['timestamp'], inplace=True)
     df.sort_values(by=['timestamp'], inplace=True)
     if transform == 'TimeSeries':
         s = TimeSeries.from_dataframe(df, 'timestamp', 'data_value')
@@ -232,6 +232,8 @@ def predict_with_freedman_diaconis_estimator():
     if (data_type is None) or (date is None) or (accuracy is None):
         abort(400)
 
+    logging.info(f"* Predicting {data_type} with Freedman Diaconis Estimator for {date} with {accuracy} accuracy")
+
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # load data
@@ -265,6 +267,8 @@ def predict_with_exponential_smoothing():
 
     if (data_type is None) or (date is None) or (accuracy is None):
         abort(400)
+
+    logging.info(f"* Predicting {data_type} with Exponential Smoothing for {date} with {accuracy} accuracy")
 
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
@@ -301,6 +305,8 @@ def predict_with_prophet():
     if (data_type is None) or (date is None) or (accuracy is None):
         abort(400)
 
+    logging.info(f"* Predicting {data_type} with Prophet for {date} with {accuracy} accuracy")
+
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # load data
@@ -336,13 +342,10 @@ def predict():
     prediction_model = request.args.get('predictionModel')
 
     if prediction_model == 'ExponentialSmoothing':
-        logging.info(f"* Predicting with Exponential Smoothing")
         prediction = predict_with_exponential_smoothing()
     elif prediction_model == 'Prophet':
-        logging.info(f"* Predicting with Prophet")
         prediction = predict_with_prophet()
     else:
-        logging.info(f"* Predicting with Freedman Diaconis Estimator")
         prediction = predict_with_freedman_diaconis_estimator()
     return create_response(prediction, 200)
 

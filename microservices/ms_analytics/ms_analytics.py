@@ -36,7 +36,8 @@ def get_predictions(dt_predictions):
     try:
         predictions = []
         for dt_prediction in dt_predictions:
-            predictions.append(Prediction(dt_prediction))
+            if dt_prediction is not None:
+                predictions.append(Prediction(dt_prediction))
         return predictions
     except (Exception, KeyError) as err:
         logging.error(err)
@@ -138,8 +139,8 @@ def check_predictions(predictions, dt_thresholds):
     return df
 
 
-@app.route('/v1/assessPrediction', methods=['POST'])
-def assess_prediction():
+@app.route('/v1/assessPredictions', methods=['POST'])
+def assess_predictions():
     """
     Accept predictions as dictionaries with the same parameters.
     Measure the mean squared error (MSE) of the predicted values.
@@ -151,6 +152,8 @@ def assess_prediction():
 
     if (dt_predictions is None) or not dt_predictions:
         abort(400)
+
+    logging.info(f"* Assess predictions: {dt_predictions}")
 
     predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
@@ -184,6 +187,8 @@ def get_accurate_prediction():
     if (dt_predictions is None) or not dt_predictions:
         abort(400)
 
+    logging.info(f"* Get accurate prediction from {dt_predictions}")
+
     predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
@@ -210,6 +215,8 @@ def get_valid_predictions():
 
     if (dt_predictions is None) or not dt_predictions:
         abort(400)
+
+    logging.info(f"* Get valid predictions: {dt_predictions}")
 
     predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
@@ -239,5 +246,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    coloredlogs.install(level='DEBUG')
+    coloredlogs.install(level='INFO')
     app.run(host='0.0.0.0', port=PORT, debug=True)

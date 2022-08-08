@@ -65,7 +65,7 @@ def get_daterange(agg_interval, date, accuracy):
         end_date = date - relativedelta(days=1)
 
     if accuracy == LOW_ACCURACY:
-        start_date = end_date - relativedelta(years=2)
+        start_date = end_date - relativedelta(years=10)
     else:
         start_date = datetime.datetime(1971, 1, 1)
     return start_date, end_date
@@ -116,7 +116,7 @@ def load(data_type, date, accuracy):
 
 def preprocess(df):
     df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
-    df.drop_duplicates(inplace=True)
+    df.drop_duplicates(subset=['timestamp'], inplace=True)
     df.set_index('timestamp', inplace=True)
     df.sort_index(inplace=True)
     return df
@@ -196,6 +196,8 @@ def predict():
 
     if (data_type is None) or (date is None) or (accuracy is None):
         abort(400)
+
+    logging.info(f"* Predicting {data_type} with Freedman Diaconis Estimator for {date} with {accuracy} accuracy")
 
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 

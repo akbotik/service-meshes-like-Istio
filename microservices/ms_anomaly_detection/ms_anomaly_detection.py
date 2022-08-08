@@ -95,6 +95,8 @@ def detect():
     if data_type is None:
         abort(400)
 
+    logging.info(f"* Detecting {data_type} anomaly")
+
     # load data
     df, agg_mode, agg_interval = load(data_type)
     df = preprocess(df)
@@ -130,6 +132,9 @@ def detect_with_thresholds():
             or (low_value is None) or (high_value is None):
         abort(400)
 
+    logging.info(f"* Detecting {data_type} anomaly from {start_date} to {end_date} "
+                 f"with thresholds {low_value}, {high_value}")
+
     start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
     end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
 
@@ -162,10 +167,8 @@ def detect_anomaly():
     thresholds = request.args.get('thresholds')
 
     if thresholds == 'True':
-        logging.info(f"* Detecting with thresholds")
         anomaly = detect_with_thresholds()
     else:
-        logging.info(f"* Detecting")
         anomaly = detect()
 
     return create_response(anomaly, 200)
