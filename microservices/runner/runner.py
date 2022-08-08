@@ -19,8 +19,8 @@ prediction_accuracies = ['low', 'high']
 prediction_models = [None, 'ExponentialSmoothing', 'Prophet']
 
 
-def get_url(ip, port, route):
-    url = f"http://{ip}:{port}{route}"
+def get_url(host, port, path):
+    url = f"http://{host}:{port}{path}"
     return url
 
 
@@ -136,8 +136,8 @@ def run():
         while True:
             time.sleep(30)  # in seconds
             date_end = date_end + date_step
-            predictions = get_predictions(executor, date_start, date_end)
             executor.submit(detect_anomaly, bool(random.getrandbits(1)), date_start, date_end)
+            predictions = get_predictions(executor, date_start, date_end)
             if any(prediction is not None for prediction in predictions):
                 executor.submit(assess_prediction, predictions)
                 executor.submit(get_accurate_prediction, predictions)
