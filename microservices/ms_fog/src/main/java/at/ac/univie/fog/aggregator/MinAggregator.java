@@ -18,7 +18,7 @@ public class MinAggregator implements IAggregator {
 
     @Override
     public double aggregate(List<SensorData> sensorDataList) {
-        var minValueEvent = sensorDataList.stream().min(Comparator.comparingDouble(SensorData::getSensorValue)).orElseThrow(NoSuchElementException::new);
+        SensorData minValueEvent = sensorDataList.stream().min(Comparator.comparingDouble(SensorData::getSensorValue)).orElseThrow(NoSuchElementException::new);
         return minValueEvent.getSensorValue();
     }
 

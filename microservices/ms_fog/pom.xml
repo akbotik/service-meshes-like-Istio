@@ -15,7 +15,7 @@
     <name>MS Fog</name>
     <description>fog</description>
     <properties>
-        <java.version>11</java.version>
+        <java.version>8</java.version>
         <start-class>at.ac.univie.fog.FogApplication</start-class>
     </properties>
     <dependencies>
@@ -73,8 +73,7 @@
                     <executions>
                         <execution>
                             <goals>
-                                <goal>repackage</goal>
-                            </goals>
+                                <goal>repackage</goal></goals>
                             <configuration>
                                 <mainClass>${start-class}</mainClass>
                                 <includeSystemScope>true</includeSystemScope>

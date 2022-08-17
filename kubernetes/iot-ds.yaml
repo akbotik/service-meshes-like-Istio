@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms_iot
+  name: ms_iot
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      app: ms_iot
+  template:
+    metadata:
+      labels:
+        app: ms_iot
+    spec:
+      containers:
+      - name: ms_iot
+        image: bachelor/ms_iot
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+        resources: {}
+      restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms_iot
+  name: ms_iot
+spec:
+  type: NodePort
+  ports:
+  - name: "ms_iot"
+    port: 8080
+    nodePort: 31000
+    targetPort: 8080
+  selector:
+    app: ms_iot
+status:
+  loadBalancer: {}
+

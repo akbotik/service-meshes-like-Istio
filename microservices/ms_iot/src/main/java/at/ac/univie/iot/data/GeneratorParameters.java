@@ -30,7 +30,7 @@ public class GeneratorParameters {
     public static final int TEMPERATURE_ANOMALY_FREQUENCY = 30;
 
     // avg temperature for each month in celsius
-    public static final Map<Integer, Double> MONTH_TO_AVERAGE_TEMPERATURE = new HashMap<>() {{
+    public static final Map<Integer, Double> MONTH_TO_AVERAGE_TEMPERATURE = new HashMap<Integer, Double>() {{
         put(0, -30.0);
         put(1, -20.0);
         put(2, -10.0);
@@ -46,7 +46,7 @@ public class GeneratorParameters {
     }};
 
     // anomaly
-    public static final List<Integer> ANOMALY = new ArrayList<>() {{
+    public static final List<Integer> ANOMALY = new ArrayList<Integer>() {{
         add(-100);
         add(100);
     } };

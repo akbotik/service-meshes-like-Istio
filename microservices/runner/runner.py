@@ -52,7 +52,7 @@ def predict(model, body):
     response = requests.post(url, json=body)
     try:
         prediction = response.json()
-    except ValueError:
+    except (Exception, ValueError):
         prediction = None
     return prediction
 
