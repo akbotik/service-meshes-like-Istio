@@ -4,7 +4,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-import coloredlogs
 import requests
 from dateutil.relativedelta import relativedelta
 from faker import Faker
@@ -145,5 +144,5 @@ def run():
 
 
 if __name__ == '__main__':
-    coloredlogs.install(level='INFO')
+    logging.basicConfig(level=logging.DEBUG)
     run()

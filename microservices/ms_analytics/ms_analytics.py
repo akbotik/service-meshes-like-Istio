@@ -1,13 +1,14 @@
 import datetime
 import itertools
 import logging
-import thresholds
-import coloredlogs
+
 import pandas as pd
 import psycopg2
 from flask import Flask, request
 from flask import jsonify, abort, make_response
 from sklearn.metrics import mean_squared_error
+
+import thresholds
 
 app = Flask(__name__)
 PORT = 8087
@@ -249,5 +250,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    coloredlogs.install(level='INFO')
+    logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=PORT, debug=True)

@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-import coloredlogs
 import numpy as np
 import pandas as pd
 import psycopg2
@@ -234,5 +233,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    coloredlogs.install(level='DEBUG')
+    logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=PORT, debug=True)
