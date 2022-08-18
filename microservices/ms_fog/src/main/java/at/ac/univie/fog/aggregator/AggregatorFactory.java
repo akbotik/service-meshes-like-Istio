@@ -8,6 +8,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+
+/**
+ * Strategy & Factory Patterns.
+ */
 @Component
 public class AggregatorFactory {
 

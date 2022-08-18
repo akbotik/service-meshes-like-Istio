@@ -23,6 +23,12 @@ public class RestController {
     @Value("${dataType}")
     private ESensor dataType;
 
+    /**
+     * Aggregates sensor data from IoT according to a configured data type.
+     *
+     * @param sensorData the sensor data for one hour
+     * @return the status "OK", if sensor data can be aggregated
+     */
     @PostMapping("/aggregateSensorData")
     public ResponseEntity<String> aggregateSensorData(@RequestBody SensorData sensorData) {
         if (sensorData.getSensorType() != dataType) {

@@ -8,6 +8,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+/**
+ * Aggregates sensor values by calculating the maximum sensor value.
+ */
 @Component
 public class MaxAggregator implements IAggregator {
 

@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+/**
+ * Aggregates sensor values by calculating the average sensor value.
+ */
 @Component
 public class AvgAggregator implements IAggregator {
 

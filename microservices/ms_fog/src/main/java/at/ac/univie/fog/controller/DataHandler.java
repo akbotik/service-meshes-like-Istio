@@ -35,6 +35,10 @@ public class DataHandler {
 
     private static final short HOURS_IN_DAY = 24;
 
+    public IAggregator findAggregator() {
+        return aggregatorFactory.findAggregator(aggregationMode);
+    }
+
     public List<SensorData> getDataForCurrentInterval(SensorData sensorData, Set<SensorData> sensorDataSet) {
         switch (aggregationInterval) {
             case DAY: return sensorDataSet.stream().filter(
@@ -47,6 +51,11 @@ public class DataHandler {
                     e -> e.getTimestamp().getYear() == (sensorData.getTimestamp().getYear())).collect(Collectors.toList());
         }
         return new ArrayList<>();
+    }
+
+    public long getDistinctSensorNumber(List<SensorData> dataForInterval) {
+        Set<Integer> set = new HashSet<>(dataForInterval.size());
+        return dataForInterval.stream().filter(p -> set.add(p.getSensorId())).count();
     }
 
     public long getHoursForCurrentInterval(SensorData sensorData) {
@@ -65,15 +74,6 @@ public class DataHandler {
     public AggregatedData getAggregatedData(LocalDateTime localDateTime, double aggregatedValue) {
         return new AggregatedData(dataType, aggregationMode, aggregationInterval,
                 localDateTime.toLocalDate(), aggregatedValue);
-    }
-
-    public long getDistinctSensorNumber(List<SensorData> dataForInterval) {
-        Set<Integer> set = new HashSet<>(dataForInterval.size());
-        return dataForInterval.stream().filter(p -> set.add(p.getSensorId())).count();
-    }
-
-    public IAggregator findAggregator() {
-        return aggregatorFactory.findAggregator(aggregationMode);
     }
 
     @PostConstruct

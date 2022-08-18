@@ -11,10 +11,8 @@ import java.util.Random;
 import static at.ac.univie.iot.data.GeneratorParameters.MIN_RANGE;
 
 /**
- * Concrete simulator classes implement abstract
- * methods defined by the ISimulator interface.
- * It is used when the client does not know
- * in advance which concrete products would be created.
+ * Concrete simulator classes implement abstract methods defined by the ISimulator interface.
+ * It is used when it is not known in advance which simulation strategy should be injected.
  */
 @Service
 public interface ISimulator {

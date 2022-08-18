@@ -8,6 +8,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+/**
+ * Aggregates sensor values by calculating the minimum sensor value.
+ */
 @Component
 public class MinAggregator implements IAggregator {
 

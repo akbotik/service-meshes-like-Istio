@@ -42,6 +42,7 @@ public class FogController {
 
     /**
      *  Injects the aggregation strategy of the fog computing defined in the configuration file.
+     *  Configurable are: aggregation mode, data type and aggregation interval.
      *  If sensor data for the whole interval is received, the aggregated data is saved to database.
      */
     private void aggregateData(SensorData sensorData) {

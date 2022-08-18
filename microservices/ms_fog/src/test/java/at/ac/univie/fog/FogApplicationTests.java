@@ -23,12 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @TestPropertySource(locations="classpath:test.properties")
 class FogApplicationTests {
 
-    
-
     @Autowired
     private DataHandler dataHandler;
-
-
 
     @Test
     public void minAggregatorTest_shouldReturnMinValue() {
@@ -51,7 +47,6 @@ class FogApplicationTests {
         assertEquals(minValue,  12.196);
     }
 
-
     @Test
     public void numberOfHoursInMonth() {
         long numberOfHoursInMonth = dataHandler.getHoursForCurrentInterval(
@@ -59,15 +54,11 @@ class FogApplicationTests {
         assertEquals(744, numberOfHoursInMonth);
     }
 
-
     @Test
     public void sensorsThatSentEventsToFog_shouldReturn3() {
         long distinctSensors = dataHandler.getDistinctSensorNumber(events());
         assertEquals(3, distinctSensors);
     }
-
-
-
 
     @Test
     public void hoursBetweenTwoDays() {
@@ -102,7 +93,6 @@ class FogApplicationTests {
 
         assertEquals(8760, ChronoUnit.HOURS.between(timeFrom.withDayOfYear(1), localDateNextMonth.withDayOfYear(1)));
     }
-
 
     private List<SensorData> events() {
         List<SensorData> sensorData = new ArrayList<>();
