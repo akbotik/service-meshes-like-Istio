@@ -21,8 +21,17 @@ public class RestController {
     @Autowired
     private IotController controller;
 
-    private long generatorStartDay = 31536000000L;
+    private long generatorStartDay = 31536000000L;  // 1971-01-01
 
+    /**
+     * Configures the sensor data type and the sensor ID.
+     * Initiates sensor data generation within provided request duration.
+     * Remembers the date of the last generated sensor data for the future requests.
+     *
+     * @param sensor the sensor to be simulated
+     * @param requestDuration the duration of data generation
+     * @return the status "OK", if data generation is completed successfully
+     */
     @PostMapping(value = "/generateSensorData", consumes = "application/json", produces = "application/json")
     public ResponseEntity<ServiceResponse> generateSensorData(@RequestBody Sensor sensor, @RequestParam int requestDuration) {
         log.info("Sensor ID: {}. Sensor type: {}", sensor.getId(), sensor.getType());

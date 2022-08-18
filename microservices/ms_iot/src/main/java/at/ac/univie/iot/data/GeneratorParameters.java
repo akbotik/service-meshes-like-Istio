@@ -10,6 +10,8 @@ import java.util.Map;
  */
 public class GeneratorParameters {
 
+    public static final String UTC_ZONE = "UTC";
+
     public static final double HOUR_IN_MS = 3600000;
 
     public static final int MIN_RANGE = 1;
@@ -23,7 +25,7 @@ public class GeneratorParameters {
     public static final int PRESSURE_ANOMALY_FREQUENCY = 50;
 
     // TEMPERATURE
-    // temperature deviation, not anomaly
+    // deviation, not anomaly
     public static final int TEMPERATURE_RANGE_FOR_ONE_DAY = 10;
     public static final int TEMPERATURE_RANGE_FOR_ONE_HOUR = 1;
     // how often anomaly should occur

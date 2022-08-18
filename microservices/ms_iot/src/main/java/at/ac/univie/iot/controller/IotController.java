@@ -30,8 +30,12 @@ public class IotController {
     public IotController() { }
 
     /**
-     *  Injects the simulation strategy of the IoT device defined in the configuration file.
-     *  Generates and publishes a stream of simulated sensor values hourly from 1971-01-01.
+     * Injects the simulation strategy of the IoT device according to a configured sensor data type.
+     * Generates and publishes a stream of simulated sensor values hourly.
+     *
+     * @param stopTime the time when data generation should be stopped
+     * @param startDay the date on which data generation should start
+     * @return the date of the last generated sensor data for the future requests
      */
     public long generateData(long stopTime, long startDay) {
         ISimulator simulator = simulatorFactory.findSimulator(sensor.getType());

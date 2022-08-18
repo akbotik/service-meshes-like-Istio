@@ -16,8 +16,12 @@ public class IotNetwork {
     @Value("${fogUrl}")
     private String fogUrl;
 
+    /**
+     * Sends the generated data to Fog.
+     *
+     * @param sensorData the generated sensor data for one hour
+     */
     public void sendData(SensorData sensorData) {
-        // TODO future (async)
         restTemplate.postForObject(fogUrl, sensorData, String.class);
     }
 

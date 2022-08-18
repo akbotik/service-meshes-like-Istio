@@ -19,16 +19,18 @@ import static at.ac.univie.iot.data.GeneratorParameters.MIN_RANGE;
 @Service
 public interface ISimulator {
 
-    SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs);
+    double getRandomAverageValueForOneMonth(Date currentDate);
 
     double getRandomAverageValueForOneDay(double avgValueForCurrentMonth);
 
-    double getRandomAverageValueForOneMonth(Date currentDate);
+    /**
+     * Simulates sensor by generating random sensor value for one hour.
+     */
+    SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs);
 
-    ESensor getSimulatorName();
-
-    default int getRandomNumber(int min, int max) {
-        return (int) ((Math.random() * (max - min + MIN_RANGE)) + min);
+    default boolean shouldGenerateAnomaly(int anomalyFrequency) {
+        int randomNumber = getRandomNumber(MIN_RANGE, anomalyFrequency);
+        return randomNumber == MIN_RANGE;
     }
 
     default double generateRandomValue(double randomValue, int valueDeviation) {
@@ -38,9 +40,10 @@ public interface ISimulator {
                 new Random().nextDouble();
     }
 
-    default boolean shouldGenerateAnomaly(int anomalyFrequency) {
-        int randomNumber = getRandomNumber(MIN_RANGE, anomalyFrequency);
-        return randomNumber == MIN_RANGE;
+    default int getRandomNumber(int min, int max) {
+        return (int) ((Math.random() * (max - min + MIN_RANGE)) + min);
     }
+
+    ESensor getSimulatorName();
 
 }

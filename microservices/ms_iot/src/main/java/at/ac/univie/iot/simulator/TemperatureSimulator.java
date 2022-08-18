@@ -16,26 +16,16 @@ import java.util.Random;
 import static at.ac.univie.iot.data.GeneratorParameters.*;
 
 /**
- * Generates a reasonable sensor data.
+ * Generates a reasonable temperature sensor data.
  * Anomaly frequency is defined in {@link GeneratorParameters}
  */
 @Component
 public class TemperatureSimulator implements ISimulator {
 
-    private final String UTC_ZONE = "UTC";
-
     @Override
-    public SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs) {
-        double randomTemperature = generateRandomValue(avgValueForOneDay, TEMPERATURE_RANGE_FOR_ONE_HOUR);
-        return new SensorData(sensor.getId(), sensor.getType(),
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(currentHourInMs), ZoneId.of(UTC_ZONE)),
-                randomTemperature);
-    }
-
-    private int getMonthFromDate(Date currentDate) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
-        return calendar.get(Calendar.MONTH);
+    public double getRandomAverageValueForOneMonth(Date currentDate) {
+        int currentMonth = getMonthFromDate(currentDate);
+        return MONTH_TO_AVERAGE_TEMPERATURE.get(currentMonth);
     }
 
     @Override
@@ -52,9 +42,17 @@ public class TemperatureSimulator implements ISimulator {
     }
 
     @Override
-    public double getRandomAverageValueForOneMonth(Date currentDate) {
-        int currentMonth = getMonthFromDate(currentDate);
-        return MONTH_TO_AVERAGE_TEMPERATURE.get(currentMonth);
+    public SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs) {
+        double randomTemperature = generateRandomValue(avgValueForOneDay, TEMPERATURE_RANGE_FOR_ONE_HOUR);
+        return new SensorData(sensor.getId(), sensor.getType(),
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(currentHourInMs), ZoneId.of(UTC_ZONE)),
+                randomTemperature);
+    }
+
+    private int getMonthFromDate(Date currentDate) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        return calendar.get(Calendar.MONTH);
     }
 
     @Override

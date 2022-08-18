@@ -15,20 +15,15 @@ import java.util.Random;
 import static at.ac.univie.iot.data.GeneratorParameters.*;
 
 /**
- * Generates a reasonable sensor data.
+ * Generates a reasonable pressure sensor data.
  * Anomaly frequency is defined in {@link GeneratorParameters}
  */
 @Component
 public class PressureSimulator implements ISimulator {
 
-    private final String UTC_ZONE = "UTC";
-
     @Override
-    public SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs) {
-        double randomPressure = generateRandomValue(avgValueForOneDay, PRESSURE_RANGE_FOR_ONE_HOUR);
-        return new SensorData(sensor.getId(), sensor.getType(),
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(currentHourInMs), ZoneId.of(UTC_ZONE)),
-                randomPressure);
+    public double getRandomAverageValueForOneMonth(Date currentDate) {
+        return 0;
     }
 
     @Override
@@ -45,8 +40,11 @@ public class PressureSimulator implements ISimulator {
     }
 
     @Override
-    public double getRandomAverageValueForOneMonth(Date currentDate) {
-        return 0;
+    public SensorData simulate(Sensor sensor, double avgValueForOneDay, long currentHourInMs) {
+        double randomPressure = generateRandomValue(avgValueForOneDay, PRESSURE_RANGE_FOR_ONE_HOUR);
+        return new SensorData(sensor.getId(), sensor.getType(),
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(currentHourInMs), ZoneId.of(UTC_ZONE)),
+                randomPressure);
     }
 
     @Override
