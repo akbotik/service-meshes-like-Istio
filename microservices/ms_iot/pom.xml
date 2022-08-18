@@ -15,7 +15,7 @@
     <name>MS IoT</name>
     <description>iot</description>
     <properties>
-        <java.version>8</java.version>
+        <java.version>11</java.version>
         <start-class>at.ac.univie.iot.IotApplication</start-class>
     </properties>
 
