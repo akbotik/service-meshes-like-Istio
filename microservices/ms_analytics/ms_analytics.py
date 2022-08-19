@@ -34,6 +34,9 @@ def get_db_connection():
 
 
 def get_predictions(dt_predictions):
+    """
+    Convert predictions from dictionaries to class objects.
+    """
     try:
         predictions = []
         for dt_prediction in dt_predictions:
@@ -46,6 +49,9 @@ def get_predictions(dt_predictions):
 
 
 def validate_prediction_params(predictions):
+    """
+    Parameters of predictions should match for further analysis.
+    """
     if not predictions:
         logging.error("Predictions are empty")
         abort(400)
@@ -96,6 +102,10 @@ def cast_to_list(x):
 
 
 def estimate_errors(true_value, predictions):
+    """
+    Calculate the mean squared error (MSE) of the predicted values,
+    i.e., difference between the true value the predicted values.
+    """
     df = pd.DataFrame(columns=['predicted_value', 'error'], index=predictions)
     df.rename_axis('prediction', inplace=True)
     for prediction in predictions:
@@ -104,14 +114,10 @@ def estimate_errors(true_value, predictions):
     return df
 
 
-def extract_predicted_values(predictions):
-    predicted_values = []
-    for prediction in predictions:
-        predicted_values.append(prediction.predicted_value)
-    return predicted_values
-
-
 def get_thresholds(date, agg_mode, agg_interval, data_type):
+    """
+    Retrieve expected thresholds according to the parameters of predictions.
+    """
     if data_type == thresholds.PRESSURE:
         return thresholds.get_pressure_thresholds()
     elif data_type == thresholds.TEMPERATURE:
@@ -128,10 +134,17 @@ def get_thresholds(date, agg_mode, agg_interval, data_type):
 
 
 def is_valid(predicted_value, dt_thresholds):
+    """
+    Compare a predicted value with expected thresholds, and
+    identify it as anomalous when it is beyond the thresholds.
+    """
     return dt_thresholds['low'] <= predicted_value <= dt_thresholds['high']
 
 
 def check_predictions(predictions, dt_thresholds):
+    """
+    Examine predicted values against the expected thresholds.
+    """
     df = pd.DataFrame(columns=['predicted_value', 'valid'], index=predictions)
     df.rename_axis('prediction', inplace=True)
     for prediction in predictions:
