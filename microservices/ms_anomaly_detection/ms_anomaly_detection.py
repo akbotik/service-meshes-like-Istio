@@ -75,7 +75,7 @@ def extract(data_type, start_date=None, end_date=None):
 
 def preprocess(df):
     """
-    Transform raw data in a required format of time series, remove duplicates and sort time index.
+    Transform raw data in a required format, remove duplicates and sort time index.
     """
     df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
     df.set_index('timestamp', inplace=True)

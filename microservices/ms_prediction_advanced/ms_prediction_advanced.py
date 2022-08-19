@@ -38,6 +38,9 @@ class Prediction:
 
 
 def get_db_connection():
+    """
+    Create a new database connection.
+    """
     conn = psycopg2.connect(host='localhost',
                             database='postgres',
                             user='postgres',
@@ -56,6 +59,10 @@ def get_last_day_of_year(date):
 
 
 def get_daterange(agg_interval, date, accuracy):
+    """
+    Compute a date range based on aggregation interval, prediction date and prediction accuracy
+    for extracting data from a database.
+    """
     if agg_interval == YEAR:
         # 1982-01-01 => 1981-12-31 (the last day of the prev year)
         end_date = get_last_day_of_year(date - relativedelta(years=1))
@@ -74,6 +81,9 @@ def get_daterange(agg_interval, date, accuracy):
 
 
 def get_query(data_type, start_date, end_date, agg_interval, freq):
+    """
+    Define a query for extracting data from a database.
+    """
     str_start_date = datetime.datetime.strftime(start_date, "%Y-%m-%d")
     str_end_date = datetime.datetime.strftime(end_date, "%Y-%m-%d")
 
@@ -89,7 +99,10 @@ def get_query(data_type, start_date, end_date, agg_interval, freq):
     return query
 
 
-def load(data_type, date, accuracy, freq=False):
+def extract(data_type, date, accuracy, freq=False):
+    """
+    Extract data from a database.
+    """
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -118,6 +131,9 @@ def load(data_type, date, accuracy, freq=False):
 
 
 def preprocess(df, transform=None):
+    """
+    Transform raw data in a required format, remove duplicates and sort time index.
+    """
     df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
     df.drop_duplicates(subset=['timestamp'], inplace=True)
     df.sort_values(by=['timestamp'], inplace=True)
@@ -131,6 +147,9 @@ def preprocess(df, transform=None):
 
 
 def clean_anomaly(df):
+    """
+    Clean outliers of historical data to make a better prediction.
+    """
     try:
         url = ANOMALY_DETECTION_URL
         json_request = df.to_json(orient='index')
@@ -147,6 +166,9 @@ def clean_anomaly(df):
 
 
 def get_missing_date(last_date, end_date, agg_interval):
+    """
+    Identify a missing date.
+    """
     if agg_interval != DAY:
         missing_date = last_date + relativedelta(years=1)
         if end_date.month == 2:
@@ -157,6 +179,9 @@ def get_missing_date(last_date, end_date, agg_interval):
 
 
 def fill_missing_values(s, end_date, agg_interval, model=None):
+    """
+    Predict missing values to ensure that there are no prediction failures.
+    """
     if type(model).__name__ == 'ExponentialSmoothing':
         last_date = s.end_time().to_pydatetime().date()
         num_steps = 1
@@ -200,6 +225,9 @@ def fill_missing_values(s, end_date, agg_interval, model=None):
 
 
 def get_predicted_value(s, model=None):
+    """
+    Return a predicted value.
+    """
     if type(model).__name__ == 'ExponentialSmoothing':
         predicted_value = s.last_value()
     elif type(model).__name__ == 'Prophet':
@@ -210,6 +238,9 @@ def get_predicted_value(s, model=None):
 
 
 def get_prediction(date, agg_mode, agg_interval, data_type, predicted_value):
+    """
+    Formulate a prediction with prediction parameters.
+    """
     if agg_interval == YEAR:
         date = get_last_day_of_year(date)
     elif agg_interval == MONTH:
@@ -223,6 +254,11 @@ def get_prediction(date, agg_mode, agg_interval, data_type, predicted_value):
 
 
 def predict_with_freedman_diaconis_estimator():
+    """
+    Predict with Freedman Diaconis Estimator.
+
+    :return: a prediction with prediction parameters
+    """
     json = request.get_json()
     data_type = json['type']
     date = json['date']
@@ -235,10 +271,10 @@ def predict_with_freedman_diaconis_estimator():
 
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
-    # load data
-    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, freq=True)
+    # extract data
+    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy, freq=True)
     df = preprocess(df)
-    logging.debug(f"Loaded data:\n{df.tail()}")
+    logging.debug(f"Extracted data:\n{df.tail()}")
 
     # clean anomaly
     df = clean_anomaly(df)
@@ -259,6 +295,11 @@ def predict_with_freedman_diaconis_estimator():
 
 
 def predict_with_exponential_smoothing():
+    """
+    Predict with Exponential Smoothing.
+
+    :return: a prediction with prediction parameters
+    """
     json = request.get_json()
     data_type = json['type']
     date = json['date']
@@ -271,10 +312,10 @@ def predict_with_exponential_smoothing():
 
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
-    # load data
-    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy)
+    # extract data
+    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy)
     ts = preprocess(df, transform='TimeSeries')
-    logging.debug(f"Loaded data:\n{ts.pd_dataframe().tail()}")
+    logging.debug(f"Extracted data:\n{ts.pd_dataframe().tail()}")
 
     # train a forecasting model
     m = ExponentialSmoothing(damped=True)
@@ -296,6 +337,11 @@ def predict_with_exponential_smoothing():
 
 
 def predict_with_prophet():
+    """
+    Predict with Prophet.
+
+    :return: a prediction with prediction parameters
+    """
     json = request.get_json()
     data_type = json['type']
     date = json['date']
@@ -308,12 +354,12 @@ def predict_with_prophet():
 
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
-    # load data
-    df, agg_mode, agg_interval, end_date = load(data_type, date, accuracy, freq=True)
+    # extract data
+    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy, freq=True)
     df = preprocess(df, transform='DataFrame')
     df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
     df_renamed.set_index('timestamp', inplace=True)
-    logging.debug(f"Loaded data:\n{df_renamed.tail()}")
+    logging.debug(f"Extracted data:\n{df_renamed.tail()}")
 
     # train a forecasting model
     m = Prophet()
@@ -338,6 +384,11 @@ def predict_with_prophet():
 
 @app.route('/v1/predict', methods=['POST'])
 def predict():
+    """
+    Predict with Freedman Diaconis Estimator, Exponential Smoothing or Prophet.
+
+    :return: a prediction with prediction parameters and a 200 OK response if intended action is successful
+    """
     prediction_model = request.args.get('predictionModel')
 
     if prediction_model == 'ExponentialSmoothing':
