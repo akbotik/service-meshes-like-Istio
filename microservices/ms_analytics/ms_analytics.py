@@ -26,6 +26,9 @@ class Prediction(object):
 
 
 def get_db_connection():
+    """
+    Create a new database connection.
+    """
     conn = psycopg2.connect(host='localhost',
                             database='postgres',
                             user='postgres',
@@ -63,6 +66,9 @@ def validate_prediction_params(predictions):
 
 
 def get_prediction_params(predictions):
+    """
+    Provide prediction parameters.
+    """
     date = datetime.datetime.strptime(predictions[0].date, "%Y-%m-%d").date()
     agg_mode = predictions[0].agg_mode
     agg_interval = predictions[0].agg_interval
@@ -70,7 +76,10 @@ def get_prediction_params(predictions):
     return date, agg_mode, agg_interval, data_type
 
 
-def load_true_value(date, agg_mode, agg_interval, data_type):
+def extract_true_value(date, agg_mode, agg_interval, data_type):
+    """
+    Extract true value from a database.
+    """
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -158,9 +167,9 @@ def assess_predictions():
     """
     Accept predictions as dictionaries with the same parameters.
     Measure the mean squared error (MSE) of the predicted values.
-    Return assessed predictions.
     Applicable only if the true value is known.
-    A 200 OK response indicates that the intended action was successful.
+
+    :return: assessed predictions and a 200 OK response if intended action is successful
     """
     json = request.get_json()
     dt_predictions = json['predictions']
@@ -173,7 +182,7 @@ def assess_predictions():
     predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
-    true_value = load_true_value(date, agg_mode, agg_interval, data_type)
+    true_value = extract_true_value(date, agg_mode, agg_interval, data_type)
     logging.debug(f"True value:\n{true_value}")
     df = estimate_errors(true_value, predictions)
     logging.debug(f"Estimated errors:\n{df}")
@@ -193,9 +202,9 @@ def get_accurate_prediction():
     """
     Accept predictions as dictionaries with the same parameters.
     Measure the mean squared error (MSE) of the predicted values.
-    Return the most accurate prediction.
     Applicable only if the true value is known.
-    A 200 OK response indicates that the intended action was successful.
+
+    :return: the most accurate prediction and a 200 OK response if intended action is successful
     """
     json = request.get_json()
     dt_predictions = json['predictions']
@@ -208,7 +217,7 @@ def get_accurate_prediction():
     predictions = get_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
-    true_value = load_true_value(date, agg_mode, agg_interval, data_type)
+    true_value = extract_true_value(date, agg_mode, agg_interval, data_type)
     logging.debug(f"True value:\n{true_value}")
     df = estimate_errors(true_value, predictions)
     df.sort_values(by=['error'], inplace=True)
@@ -223,9 +232,9 @@ def get_valid_predictions():
     """
     Accept predictions as dictionaries with the same parameters.
     Examine predicted values against the expected thresholds.
-    Return valid predictions.
     No true value is required.
-    A 200 OK response indicates that the intended action was successful.
+
+    :return: valid predictions and a 200 OK response if intended action is successful
     """
     json = request.get_json()
     dt_predictions = json['predictions']

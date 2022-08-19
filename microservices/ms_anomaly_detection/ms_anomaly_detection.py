@@ -19,6 +19,9 @@ TABLE = 'aggregated_data'
 
 
 def get_db_connection():
+    """
+    Create a new database connection.
+    """
     conn = psycopg2.connect(host='localhost',
                             database='postgres',
                             user='postgres',
@@ -27,6 +30,9 @@ def get_db_connection():
 
 
 def get_query(data_type, start_date, end_date):
+    """
+    Define a query for extracting data from a database.
+    """
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
             f" WHERE data_type = '{data_type}'"
     if (start_date is not None) and (end_date is not None):
@@ -37,7 +43,10 @@ def get_query(data_type, start_date, end_date):
     return query
 
 
-def load(data_type, start_date=None, end_date=None):
+def extract(data_type, start_date=None, end_date=None):
+    """
+    Extract data from a database.
+    """
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -65,6 +74,9 @@ def load(data_type, start_date=None, end_date=None):
 
 
 def preprocess(df):
+    """
+    Transform raw data in a required format of time series, remove duplicates and sort time index.
+    """
     df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%d")
     df.set_index('timestamp', inplace=True)
     df = validate_series(df)
@@ -72,6 +84,9 @@ def preprocess(df):
 
 
 def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
+    """
+    Provide anomaly detection parameters.
+    """
     dt = dict(agg_mode=agg_mode, agg_interval=agg_interval, data_type=data_type, anomaly_count=anomaly_count)
 
     if (start_date is not None) and (end_date is not None):
@@ -88,6 +103,14 @@ def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_d
 
 
 def detect():
+    """
+    Detect anomalies of historical data based on generalized ESD test.
+    Perform generalized extreme studentized deviate test on historical data
+    which follows an approximately normal distribution
+    and identify normal values vs. outliers.
+
+    :return: detected anomalies with anomaly detection parameters
+    """
     json = request.get_json()
     data_type = json['type']
 
@@ -96,10 +119,10 @@ def detect():
 
     logging.info(f"* Detecting {data_type} anomaly")
 
-    # load data
-    df, agg_mode, agg_interval = load(data_type)
+    # extract data
+    df, agg_mode, agg_interval = extract(data_type)
     df = preprocess(df)
-    logging.debug(f"Loaded data:\n{df.tail()}")
+    logging.debug(f"Extracted data:\n{df.tail()}")
 
     # detect anomaly
     esd_ad = GeneralizedESDTestAD()
@@ -120,6 +143,13 @@ def detect():
 
 
 def detect_with_thresholds():
+    """
+    Detect anomalies of historical data based on user-given thresholds.
+    Compare stored values with user-given thresholds and
+    identify values as anomalous when they are beyond the thresholds.
+
+    :return: detected anomalies with anomaly detection parameters
+    """
     json = request.get_json()
     data_type = json['type']
     start_date = json['start_date']
@@ -137,10 +167,10 @@ def detect_with_thresholds():
     start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
     end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
 
-    # load data
-    df, agg_mode, agg_interval = load(data_type, start_date=start_date, end_date=end_date)
+    # extract data
+    df, agg_mode, agg_interval = extract(data_type, start_date=start_date, end_date=end_date)
     df = preprocess(df)
-    logging.debug(f"Loaded data:\n{df.tail()}")
+    logging.debug(f"Extracted data:\n{df.tail()}")
 
     # detect anomaly
     threshold_ad = ThresholdAD(low=low_value, high=high_value)
@@ -163,6 +193,11 @@ def detect_with_thresholds():
 
 @app.route('/v1/detectAnomaly', methods=['POST'])
 def detect_anomaly():
+    """
+    Detect anomalies of historical data based on generalized ESD test or on user-given thresholds.
+
+    :return: detected anomalies with anomaly detection parameters and a 200 OK response if intended action is successful
+    """
     thresholds = request.args.get('thresholds')
 
     if thresholds == 'True':
@@ -175,6 +210,11 @@ def detect_anomaly():
 
 @app.route('/v1/cleanAnomaly', methods=['DELETE'])
 def clean_anomaly():
+    """
+    Clean outliers of historical data based on generalized ESD test to reduce the noise.
+
+    :return: cleaned data and a 200 OK response if intended action is successful
+    """
     # receive data
     json_request = request.get_json()
     df = pd.read_json(json_request, orient='index')
