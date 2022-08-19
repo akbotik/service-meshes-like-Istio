@@ -33,6 +33,39 @@ def generate_data(data_type, port):
     requests.post(url, json=body)
 
 
+def get_random_anomaly_thresholds(data_type):
+    if data_type == 'TEMPERATURE':
+        low_value = random.uniform(-50, 50)
+        high_value = random.uniform(-50, 50)
+    else:
+        low_value = random.uniform(980, 1030)
+        high_value = random.uniform(980, 1030)
+    if low_value > high_value:
+        temp = low_value
+        low_value = high_value
+        high_value = temp
+    return low_value, high_value
+
+
+def detect_anomaly(thresholds, date_start, date_end):
+    data_type = random.choice(data_types)
+    if thresholds:
+        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/v1/detectAnomaly?thresholds=' + str(thresholds))
+        start_date = Faker().date_between_dates(date_start=date_start, date_end=date_end)
+        start_date = datetime.strftime(start_date, "%Y-%m-%d")
+        end_date = datetime.strftime(date_end, "%Y-%m-%d")
+        low_value, high_value = get_random_anomaly_thresholds(data_type)
+        body = dict(type=data_type, start_date=start_date, end_date=end_date,
+                    low_value=low_value, high_value=high_value)
+        logging.info(f"Detect {data_type} anomaly from {start_date} to {end_date} "
+                     f"with thresholds {low_value}, {high_value}")
+    else:
+        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/v1/detectAnomaly')
+        body = dict(type=data_type)
+        logging.info(f"Detect {data_type} anomaly")
+    requests.post(url, json=body)
+
+
 def get_random_prediction_body(date_start, date_end):
     data_type = random.choice(data_types)
     date = Faker().date_between(start_date=random.choice((date_start, date_end)))
@@ -67,39 +100,6 @@ def get_predictions(executor, date_start, date_end):
         prediction = future.result()  # blocks
         predictions.append(prediction)
     return predictions
-
-
-def get_random_anomaly_thresholds(data_type):
-    if data_type == 'TEMPERATURE':
-        low_value = random.uniform(-50, 50)
-        high_value = random.uniform(-50, 50)
-    else:
-        low_value = random.uniform(980, 1030)
-        high_value = random.uniform(980, 1030)
-    if low_value > high_value:
-        temp = low_value
-        low_value = high_value
-        high_value = temp
-    return low_value, high_value
-
-
-def detect_anomaly(thresholds, date_start, date_end):
-    data_type = random.choice(data_types)
-    if thresholds:
-        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/v1/detectAnomaly?thresholds=' + str(thresholds))
-        start_date = Faker().date_between_dates(date_start=date_start, date_end=date_end)
-        start_date = datetime.strftime(start_date, "%Y-%m-%d")
-        end_date = datetime.strftime(date_end, "%Y-%m-%d")
-        low_value, high_value = get_random_anomaly_thresholds(data_type)
-        body = dict(type=data_type, start_date=start_date, end_date=end_date,
-                    low_value=low_value, high_value=high_value)
-        logging.info(f"Detect {data_type} anomaly from {start_date} to {end_date} "
-                     f"with thresholds {low_value}, {high_value}")
-    else:
-        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/v1/detectAnomaly')
-        body = dict(type=data_type)
-        logging.info(f"Detect {data_type} anomaly")
-    requests.post(url, json=body)
 
 
 def assess_prediction(predictions):
