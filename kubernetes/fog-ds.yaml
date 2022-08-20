@@ -2,22 +2,22 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: ms-iot
-  name: ms-iot
+    app: ms-fog
+  name: ms-fog
 spec:
   replicas: 1
   strategy: {}
   selector:
     matchLabels:
-      app: ms-iot
+      app: ms-fog
   template:
     metadata:
       labels:
-        app: ms-iot
+        app: ms-fog
     spec:
       containers:
-      - name: ms-iot
-        image: bachelor/ms-iot:v1
+      - name: ms-fog
+        image: bachelor/ms-fog:v1
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8080
@@ -29,17 +29,17 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: ms-iot
-  name: ms-iot
+    app: ms-fog
+  name: ms-fog
 spec:
   type: NodePort
   ports:
-  - name: "ms-iot"
+  - name: "ms-fog"
     port: 8080
-    nodePort: 31000
+    nodePort: 31001
     targetPort: 8080
   selector:
-    app: ms-iot
+    app: ms-fog
 status:
   loadBalancer: {}
 
