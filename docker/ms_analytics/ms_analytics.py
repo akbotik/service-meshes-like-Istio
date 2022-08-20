@@ -29,7 +29,7 @@ def get_db_connection():
     """
     Create a new database connection.
     """
-    conn = psycopg2.connect(host='localhost',
+    conn = psycopg2.connect(host='postgres',
                             database='postgres',
                             user='postgres',
                             password='password')

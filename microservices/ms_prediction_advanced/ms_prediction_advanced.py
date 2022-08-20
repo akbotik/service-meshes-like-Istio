@@ -10,7 +10,7 @@ from darts.models import ExponentialSmoothing
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request
 from flask import jsonify, abort, make_response
-from prophet import Prophet
+# from prophet import Prophet
 from requests.exceptions import HTTPError
 
 app = Flask(__name__)
@@ -336,50 +336,50 @@ def predict_with_exponential_smoothing():
     return prediction
 
 
-def predict_with_prophet():
-    """
-    Predict with Prophet.
-
-    :return: a prediction with prediction parameters
-    """
-    json = request.get_json()
-    data_type = json['type']
-    date = json['date']
-    accuracy = json['accuracy']
-
-    if (data_type is None) or (date is None) or (accuracy is None):
-        abort(400)
-
-    logging.info(f"* Predicting {data_type} with Prophet for {date} with {accuracy} accuracy")
-
-    date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-
-    # extract data
-    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy, freq=True)
-    df = preprocess(df, transform='DataFrame')
-    df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
-    df_renamed.set_index('timestamp', inplace=True)
-    logging.debug(f"Extracted data:\n{df_renamed.tail()}")
-
-    # train a forecasting model
-    m = Prophet()
-    m.fit(df)
-
-    # fill missing values
-    old_size = df.size
-    df = fill_missing_values(df, end_date, agg_interval, model=m)
-    df_renamed = df.rename(columns={'ds': 'timestamp', 'yhat': 'data_value'})
-    df_renamed.set_index('timestamp', inplace=True)
-    if df.size != old_size:
-        logging.debug(f"Data with missing values:\n{df_renamed.tail()}")
-
-    # predict
-    predicted_value = get_predicted_value(df, model=m)
-
-    # formulate a prediction
-    prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
-    logging.info(f"Predicted with Prophet:\n{prediction}")
-    return prediction
+# def predict_with_prophet():
+#     """
+#     Predict with Prophet.
+#
+#     :return: a prediction with prediction parameters
+#     """
+#     json = request.get_json()
+#     data_type = json['type']
+#     date = json['date']
+#     accuracy = json['accuracy']
+#
+#     if (data_type is None) or (date is None) or (accuracy is None):
+#         abort(400)
+#
+#     logging.info(f"* Predicting {data_type} with Prophet for {date} with {accuracy} accuracy")
+#
+#     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+#
+#     # extract data
+#     df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy, freq=True)
+#     df = preprocess(df, transform='DataFrame')
+#     df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
+#     df_renamed.set_index('timestamp', inplace=True)
+#     logging.debug(f"Extracted data:\n{df_renamed.tail()}")
+#
+#     # train a forecasting model
+#     m = Prophet()
+#     m.fit(df)
+#
+#     # fill missing values
+#     old_size = df.size
+#     df = fill_missing_values(df, end_date, agg_interval, model=m)
+#     df_renamed = df.rename(columns={'ds': 'timestamp', 'yhat': 'data_value'})
+#     df_renamed.set_index('timestamp', inplace=True)
+#     if df.size != old_size:
+#         logging.debug(f"Data with missing values:\n{df_renamed.tail()}")
+#
+#     # predict
+#     predicted_value = get_predicted_value(df, model=m)
+#
+#     # formulate a prediction
+#     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+#     logging.info(f"Predicted with Prophet:\n{prediction}")
+#     return prediction
 
 
 @app.route('/v1/predict', methods=['POST'])

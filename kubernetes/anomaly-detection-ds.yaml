@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-anomaly-detection
+  name: ms-anomaly-detection
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      app: ms-anomaly-detection
+  template:
+    metadata:
+      labels:
+        app: ms-anomaly-detection
+    spec:
+      containers:
+      - name: ms-anomaly-detection
+        image: bachelor/ms-anomaly-detection:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+        resources: {}
+      restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-anomaly-detection
+  name: ms-anomaly-detection
+spec:
+  type: NodePort
+  ports:
+  - name: "ms-anomaly-detection"
+    port: 8080
+    nodePort: 31006
+    targetPort: 8080
+  selector:
+    app: ms-anomaly-detection
+status:
+  loadBalancer: {}
+

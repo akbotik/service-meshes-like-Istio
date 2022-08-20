@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-analytics
+  name: ms-analytics
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      app: ms-analytics
+  template:
+    metadata:
+      labels:
+        app: ms-analytics
+    spec:
+      containers:
+      - name: ms-analytics
+        image: bachelor/ms-analytics:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+        resources: {}
+      restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-analytics
+  name: ms-analytics
+spec:
+  type: NodePort
+  ports:
+  - name: "ms-analytics"
+    port: 8080
+    nodePort: 31004
+    targetPort: 8080
+  selector:
+    app: ms-analytics
+status:
+  loadBalancer: {}
+

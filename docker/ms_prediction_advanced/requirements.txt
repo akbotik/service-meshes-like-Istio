@@ -1,2 +1,7 @@
-cmdstanpy==1.0.1
-prophet
+datetime
+numpy
+pandas
+psycopg2
+requests
+darts
+flask
