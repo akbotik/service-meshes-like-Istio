@@ -36,7 +36,7 @@ spec:
   ports:
   - name: "ms-analytics"
     port: 8080
-    nodePort: 31004
+    nodePort: 31005
     targetPort: 8080
   selector:
     app: ms-analytics

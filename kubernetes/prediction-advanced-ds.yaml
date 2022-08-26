@@ -36,7 +36,7 @@ spec:
   ports:
   - name: "ms-prediction-advanced"
     port: 8080
-    nodePort: 31003
+    nodePort: 31004
     targetPort: 8080
   selector:
     app: ms-prediction-advanced

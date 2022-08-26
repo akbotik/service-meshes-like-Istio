@@ -36,7 +36,7 @@ spec:
   ports:
   - name: "ms-anomaly-detection"
     port: 8080
-    nodePort: 31006
+    nodePort: 31002
     targetPort: 8080
   selector:
     app: ms-anomaly-detection
