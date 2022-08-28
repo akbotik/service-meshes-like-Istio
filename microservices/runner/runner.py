@@ -102,7 +102,7 @@ def get_predictions(executor, date_start, date_end):
     return predictions
 
 
-def assess_prediction(predictions):
+def assess_predictions(predictions):
     url = get_url('localhost', ANALYTICS_PORT, '/v1/assessPredictions')
     body = dict(predictions=predictions)
     logging.info(f"Assess predictions: {predictions}")
