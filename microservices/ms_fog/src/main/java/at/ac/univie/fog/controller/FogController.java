@@ -46,7 +46,7 @@ public class FogController {
      *  If sensor data for the whole interval is received, the aggregated data is saved to database.
      */
     private void aggregateData(SensorData sensorData) {
-        // if sensor data was already saved, do not process it again
+        // if sensor data was already aggregated, do not process it again
         if (aggregatedDates.contains(sensorData.getTimestamp().toLocalDate())) {
             return;
         }
@@ -57,11 +57,12 @@ public class FogController {
 
         // get all data for current day/month/year
         List<SensorData> dataForInterval = dataHandler.getDataForCurrentInterval(sensorData, this.sensorDataSet);
-        // number of sensors, that sent data to Fog
+        // get number of sensors, that sent data to Fog
         long distinctSensors = dataHandler.getDistinctSensorNumber(dataForInterval);
-        // get hours between event time and the next day/month/year
+        // get number of hours for current day/month/year
         long hoursForInterval = dataHandler.getHoursForCurrentInterval(sensorData);
 
+        // if sensor data for the whole interval is received, aggregate and save it to database
         if ((distinctSensors * hoursForInterval) == dataForInterval.size()) {
             aggregatedDates.add(sensorData.getTimestamp().toLocalDate());
             double aggregatedValue = aggregator.aggregate(dataForInterval);
