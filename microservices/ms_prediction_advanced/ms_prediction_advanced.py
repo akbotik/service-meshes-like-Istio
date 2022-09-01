@@ -22,8 +22,8 @@ YEAR = 'YEAR'
 MONTH = 'MONTH'
 DAY = 'DAY'
 
-LOW_ACCURACY = 'low'
-HIGH_ACCURACY = 'high'
+LOW_ACCURACY = 'LOW'
+HIGH_ACCURACY = 'HIGH'
 
 TABLE = 'aggregated_data'
 

@@ -14,7 +14,7 @@ ANOMALY_DETECTION_PORT = 8084
 ANALYTICS_PORT = 8087
 
 data_types = ['PRESSURE', 'TEMPERATURE']
-prediction_accuracies = ['low', 'high']
+prediction_accuracies = ['LOW', 'HIGH']
 prediction_models = [None, 'ExponentialSmoothing', 'Prophet']
 
 
