@@ -83,7 +83,8 @@ def preprocess(df):
     return df
 
 
-def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
+def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count,
+                       start_date=None, end_date=None, low_value=None, high_value=None):
     """
     Provide anomaly detection parameters.
     """
@@ -99,6 +100,10 @@ def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_d
         else:
             dt['start_date'] = f"{start_date}"
             dt['end_date'] = f"{end_date}"
+
+    if (low_value is not None) and (high_value is not None):
+        dt['low_value'] = low_value
+        dt['high_value'] = high_value
     return dt
 
 
@@ -184,7 +189,8 @@ def detect_with_thresholds():
     else:
         anomaly_count = 0
     params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count,
-                                start_date=start_date, end_date=end_date)
+                                start_date=start_date, end_date=end_date,
+                                low_value=low_value, high_value=high_value)
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
     logging.info(f"Anomaly:\n{anomaly}")
