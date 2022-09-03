@@ -136,10 +136,7 @@ def detect():
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # formulate an anomaly
-    if anomalies.shape[0] != 0:
-        anomaly_count = df_anomaly.value_counts()[True].item()
-    else:
-        anomaly_count = 0
+    anomaly_count = anomalies.shape[0]
     params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count)
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
@@ -184,10 +181,7 @@ def detect_with_thresholds():
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # formulate an anomaly
-    if anomalies.shape[0] != 0:
-        anomaly_count = df_anomaly.value_counts()[True].item()
-    else:
-        anomaly_count = 0
+    anomaly_count = anomalies.shape[0]
     params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count,
                                 start_date=start_date, end_date=end_date,
                                 low_value=low_value, high_value=high_value)
