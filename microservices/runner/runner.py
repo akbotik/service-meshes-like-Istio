@@ -138,11 +138,11 @@ def run():
             executor.submit(detect_anomaly, bool(random.getrandbits(1)), date_start, date_end)
             predictions = get_predictions(executor, date_start, date_end)
             if any(prediction is not None for prediction in predictions):
-                executor.submit(assess_prediction, predictions)
+                executor.submit(assess_predictions, predictions)
                 executor.submit(get_accurate_prediction, predictions)
                 executor.submit(get_valid_predictions, predictions)
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
     run()

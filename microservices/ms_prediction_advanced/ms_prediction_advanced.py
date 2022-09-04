@@ -180,7 +180,7 @@ def get_missing_date(last_date, end_date, agg_interval):
 
 def fill_missing_values(s, end_date, agg_interval, model=None):
     """
-    Predict missing values to ensure that there are no prediction failures.
+    Predict missing values incl. the target value to ensure that there are no prediction failures.
     """
     if type(model).__name__ == 'ExponentialSmoothing':
         last_date = s.end_time().to_pydatetime().date()
@@ -189,9 +189,8 @@ def fill_missing_values(s, end_date, agg_interval, model=None):
             missing_date = get_missing_date(last_date, end_date, agg_interval)
             num_steps += 1
             last_date = missing_date
-        if num_steps > 0:
-            prediction = model.predict(num_steps)
-            s = s.concatenate(prediction, ignore_time_axes=True)
+        prediction = model.predict(num_steps)
+        s = s.concatenate(prediction, ignore_time_axes=True)
     elif type(model).__name__ == 'Prophet':
         last_date = s['ds'].iat[-1].date()
         periods = 1
@@ -199,10 +198,9 @@ def fill_missing_values(s, end_date, agg_interval, model=None):
             missing_date = get_missing_date(last_date, end_date, agg_interval)
             periods += 1
             last_date = missing_date
-        if periods > 0:
-            future = model.make_future_dataframe(periods=periods)
-            forecast = model.predict(future)
-            s = forecast[['ds', 'yhat']].copy()
+        future = model.make_future_dataframe(periods=periods)
+        forecast = model.predict(future)
+        s = forecast[['ds', 'yhat']].copy()
     else:
         last_date = s.index[-1].date()
         while last_date != end_date:
@@ -410,5 +408,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
     app.run(host='0.0.0.0', port=PORT, debug=True)

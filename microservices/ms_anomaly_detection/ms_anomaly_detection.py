@@ -246,5 +246,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
     app.run(host='0.0.0.0', port=PORT, debug=True)
