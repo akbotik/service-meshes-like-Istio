@@ -171,7 +171,7 @@ def get_missing_date(last_date, end_date, agg_interval):
 
 def fill_missing_values(df, end_date, agg_interval):
     """
-    Predict missing values to ensure that there are no prediction failures.
+    Predict missing values incl. the target value to ensure that there are no prediction failures.
     """
     last_date = df.index[-1].date()
     while last_date != end_date:
