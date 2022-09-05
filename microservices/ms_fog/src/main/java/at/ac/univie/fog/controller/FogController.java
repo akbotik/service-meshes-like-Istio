@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,9 +66,11 @@ public class FogController {
 
         // if sensor data for the whole interval is received, aggregate and save it to database
         if ((distinctSensors * hoursForInterval) == dataForInterval.size()) {
-            aggregatedDates.add(sensorData.getTimestamp().toLocalDate());
+            dataForInterval.sort(Comparator.comparing(SensorData::getTimestamp));
+            LocalDate timestamp = dataForInterval.get(dataForInterval.size() - 1).getTimestamp().toLocalDate();
             double aggregatedValue = aggregator.aggregate(dataForInterval);
-            AggregatedData aggregatedData = dataHandler.getAggregatedData(sensorData.getTimestamp(), aggregatedValue);
+            AggregatedData aggregatedData = dataHandler.getAggregatedData(timestamp, aggregatedValue);
+            aggregatedDates.add(timestamp);
             dataForInterval.forEach(this.sensorDataSet::remove);
             fogRepository.save(aggregatedData);
             log.info("Saved to database: {}", aggregatedData);

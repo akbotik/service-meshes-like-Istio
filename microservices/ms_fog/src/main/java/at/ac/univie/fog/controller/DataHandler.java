@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -71,9 +72,9 @@ public class DataHandler {
         }
     }
 
-    public AggregatedData getAggregatedData(LocalDateTime localDateTime, double aggregatedValue) {
+    public AggregatedData getAggregatedData(LocalDate timestamp, double aggregatedValue) {
         return new AggregatedData(dataType, aggregationMode, aggregationInterval,
-                localDateTime.toLocalDate(), aggregatedValue);
+                timestamp, aggregatedValue);
     }
 
     @PostConstruct
