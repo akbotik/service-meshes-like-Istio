@@ -36,7 +36,7 @@ def get_db_connection():
     return conn
 
 
-def get_predictions(dt_predictions):
+def convert_predictions(dt_predictions):
     """
     Convert predictions from dictionaries to class objects.
     """
@@ -179,7 +179,7 @@ def assess_predictions():
 
     logging.info(f"* Assess predictions: {dt_predictions}")
 
-    predictions = get_predictions(dt_predictions)
+    predictions = convert_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
     true_value = extract_true_value(date, agg_mode, agg_interval, data_type)
@@ -214,7 +214,7 @@ def get_accurate_prediction():
 
     logging.info(f"* Get accurate prediction from {dt_predictions}")
 
-    predictions = get_predictions(dt_predictions)
+    predictions = convert_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
     true_value = extract_true_value(date, agg_mode, agg_interval, data_type)
@@ -244,7 +244,7 @@ def get_valid_predictions():
 
     logging.info(f"* Get valid predictions: {dt_predictions}")
 
-    predictions = get_predictions(dt_predictions)
+    predictions = convert_predictions(dt_predictions)
     validate_prediction_params(predictions)
     date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
     dt_thresholds = get_thresholds(date, agg_mode, agg_interval, data_type)
