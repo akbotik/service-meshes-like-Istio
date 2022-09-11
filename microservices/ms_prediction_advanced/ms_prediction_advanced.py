@@ -190,7 +190,7 @@ def predict_missing_values(s, end_date, agg_interval, model=None):
             num_steps += 1
             last_date = missing_date
         prediction = model.predict(num_steps)
-        s = s.concatenate(prediction, ignore_time_axes=True)
+        s = s.concatenate(prediction, ignore_time_axis=True)
     elif type(model).__name__ == 'Prophet':
         last_date = s['ds'].iat[-1].date()
         periods = 1
