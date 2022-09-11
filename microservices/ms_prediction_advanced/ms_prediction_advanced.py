@@ -178,9 +178,9 @@ def get_missing_date(last_date, end_date, agg_interval):
     return missing_date
 
 
-def fill_missing_values(s, end_date, agg_interval, model=None):
+def predict_missing_values(s, end_date, agg_interval, model=None):
     """
-    Predict missing values incl. the target value to ensure that there are no prediction failures.
+    Predict the target value incl. missing values to ensure that there are no prediction failures.
     """
     if type(model).__name__ == 'ExponentialSmoothing':
         last_date = s.end_time().to_pydatetime().date()
@@ -277,16 +277,14 @@ def predict_with_freedman_diaconis_estimator():
     # clean anomaly
     df = clean_anomaly(df)
 
-    # fill missing values
-    old_size = df.size
-    df = fill_missing_values(df, end_date, agg_interval)
-    if df.size != old_size:
-        logging.debug(f"Cleaned data with missing values:\n{df.tail()}")
-
     # predict
-    predicted_value = get_predicted_value(df)
+    old_size = df.size
+    df = predict_missing_values(df, end_date, agg_interval)
+    if df.size != old_size:
+        logging.debug(f"Predicted data:\n{df.tail()}")
 
     # formulate a prediction
+    predicted_value = get_predicted_value(df)
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
     logging.info(f"Predicted with Freedman Diaconis Estimator:\n{prediction}")
     return prediction
@@ -319,16 +317,14 @@ def predict_with_exponential_smoothing():
     m = ExponentialSmoothing(damped=True)
     m.fit(ts)
 
-    # fill missing values
-    old_size = ts.duration
-    ts = fill_missing_values(ts, end_date, agg_interval, model=m)
-    if ts.duration != old_size:
-        logging.debug(f"Data with missing values:\n{ts.pd_dataframe().tail()}")
-
     # predict
-    predicted_value = get_predicted_value(ts, model=m)
+    old_size = ts.duration
+    ts = predict_missing_values(ts, end_date, agg_interval, model=m)
+    if ts.duration != old_size:
+        logging.debug(f"Predicted data:\n{ts.pd_dataframe().tail()}")
 
     # formulate a prediction
+    predicted_value = get_predicted_value(ts, model=m)
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
     logging.info(f"Predicted with Exponential Smoothing:\n{prediction}")
     return prediction
@@ -363,18 +359,16 @@ def predict_with_prophet():
     m = Prophet()
     m.fit(df)
 
-    # fill missing values
+    # predict
     old_size = df.size
-    df = fill_missing_values(df, end_date, agg_interval, model=m)
+    df = predict_missing_values(df, end_date, agg_interval, model=m)
     df_renamed = df.rename(columns={'ds': 'timestamp', 'yhat': 'data_value'})
     df_renamed.set_index('timestamp', inplace=True)
     if df.size != old_size:
-        logging.debug(f"Data with missing values:\n{df_renamed.tail()}")
-
-    # predict
-    predicted_value = get_predicted_value(df, model=m)
+        logging.debug(f"Predicted data:\n{df_renamed.tail()}")
 
     # formulate a prediction
+    predicted_value = get_predicted_value(df, model=m)
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
     logging.info(f"Predicted with Prophet:\n{prediction}")
     return prediction
