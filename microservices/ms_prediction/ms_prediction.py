@@ -169,9 +169,9 @@ def get_missing_date(last_date, end_date, agg_interval):
     return missing_date
 
 
-def fill_missing_values(df, end_date, agg_interval):
+def predict_missing_values(df, end_date, agg_interval):
     """
-    Predict missing values incl. the target value to ensure that there are no prediction failures.
+    Predict the target value incl. missing values to ensure that there are no prediction failures.
     """
     last_date = df.index[-1].date()
     while last_date != end_date:
@@ -244,16 +244,14 @@ def predict():
     # clean anomaly
     df = clean_anomaly(df)
 
-    # fill missing values
-    old_size = df.size
-    df = fill_missing_values(df, end_date, agg_interval)
-    if df.size != old_size:
-        logging.debug(f"Cleaned data with missing values:\n{df.tail()}")
-
     # predict
-    predicted_value = get_predicted_value(df)
+    old_size = df.size
+    df = predict_missing_values(df, end_date, agg_interval)
+    if df.size != old_size:
+        logging.debug(f"Predicted data:\n{df.tail()}")
 
     # formulate a prediction
+    predicted_value = get_predicted_value(df)
     prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
     logging.info(f"Prediction:\n{prediction}")
     return create_response(prediction, 200)
