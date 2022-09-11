@@ -89,7 +89,7 @@ def get_query(data_type, agg_mode, agg_interval, start_date, end_date, freq):
 
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
             f" WHERE data_type = '{data_type}'" \
-            f" AND aggregation_mode= '{agg_mode}' AND aggregation_interval= '{agg_interval}'" \
+            f" AND aggregation_mode = '{agg_mode}' AND aggregation_interval = '{agg_interval}'" \
             f" AND '[{str_start_date}, {str_end_date}]'::daterange @> timestamp"
     if freq:
         if agg_interval != YEAR:
