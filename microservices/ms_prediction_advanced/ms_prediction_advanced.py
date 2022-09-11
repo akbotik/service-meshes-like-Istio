@@ -74,7 +74,7 @@ def get_daterange(agg_interval, date, accuracy):
         end_date = date - relativedelta(days=1)
 
     if accuracy == LOW_ACCURACY:
-        start_date = end_date - relativedelta(years=10)
+        start_date = end_date - relativedelta(years=2)
     else:
         start_date = datetime.datetime(1971, 1, 1)
     return start_date, end_date
