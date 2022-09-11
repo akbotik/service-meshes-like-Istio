@@ -77,7 +77,7 @@ def get_daterange(agg_interval, date, accuracy):
     return start_date, end_date
 
 
-def get_query(data_type, start_date, end_date, agg_interval):
+def get_query(data_type, agg_mode, agg_interval, start_date, end_date):
     """
     Define a query for extracting data from a database.
     """
@@ -86,6 +86,7 @@ def get_query(data_type, start_date, end_date, agg_interval):
 
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
             f" WHERE data_type = '{data_type}'" \
+            f" AND aggregation_mode= '{agg_mode}' AND aggregation_interval= '{agg_interval}'" \
             f" AND '[{str_start_date}, {str_end_date}]'::daterange @> timestamp"
     if agg_interval != YEAR:
         query = query + f" AND DATE_PART('{MONTH.lower()}', timestamp) = {end_date.month}"
@@ -107,7 +108,7 @@ def extract(data_type, date, accuracy):
         if cur.rowcount > 0:
             agg_mode, agg_interval = cur.fetchone()
             start_date, end_date = get_daterange(agg_interval, date, accuracy)
-            query = get_query(data_type, start_date, end_date, agg_interval)
+            query = get_query(data_type, agg_mode, agg_interval, start_date, end_date)
             logging.debug(f"Prediction query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
