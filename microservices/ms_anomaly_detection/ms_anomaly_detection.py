@@ -29,12 +29,13 @@ def get_db_connection():
     return conn
 
 
-def get_query(data_type, start_date, end_date):
+def get_query(data_type, agg_mode, agg_interval, start_date, end_date):
     """
     Define a query for extracting data from a database.
     """
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
-            f" WHERE data_type = '{data_type}'"
+            f" WHERE data_type = '{data_type}'" \
+            f" AND aggregation_mode = '{agg_mode}' AND aggregation_interval = '{agg_interval}'"
     if (start_date is not None) and (end_date is not None):
         str_start_date = datetime.datetime.strftime(start_date, "%Y-%m-%d")
         str_end_date = datetime.datetime.strftime(end_date, "%Y-%m-%d")
@@ -54,7 +55,7 @@ def extract(data_type, start_date=None, end_date=None):
                     f" FROM {TABLE} WHERE data_type = '{data_type}'")
         if cur.rowcount > 0:
             agg_mode, agg_interval = cur.fetchone()
-            query = get_query(data_type, start_date, end_date)
+            query = get_query(data_type, agg_mode, agg_interval, start_date, end_date)
             logging.debug(f"Anomaly query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
@@ -91,15 +92,8 @@ def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count,
     dt = dict(agg_mode=agg_mode, agg_interval=agg_interval, data_type=data_type, anomaly_count=anomaly_count)
 
     if (start_date is not None) and (end_date is not None):
-        if agg_interval == YEAR:
-            dt['start_date'] = f"{start_date.year}"
-            dt['end_date'] = f"{end_date.year}"
-        elif agg_interval == MONTH:
-            dt['start_date'] = f"{start_date.year}-{start_date.month}"
-            dt['end_date'] = f"{end_date.year}-{end_date.month}"
-        else:
-            dt['start_date'] = f"{start_date}"
-            dt['end_date'] = f"{end_date}"
+        dt['start_date'] = datetime.datetime.strftime(start_date, "%Y-%m-%d")
+        dt['end_date'] = datetime.datetime.strftime(end_date, "%Y-%m-%d")
 
     if (low_value is not None) and (high_value is not None):
         dt['low_value'] = low_value
