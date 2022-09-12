@@ -29,12 +29,12 @@ TABLE = 'aggregated_data'
 
 
 class Prediction:
-    def __init__(self, date, agg_mode, agg_interval, data_type, predicted_value):
-        self.date = date                        # string
-        self.agg_mode = agg_mode                # string
-        self.agg_interval = agg_interval        # string
-        self.data_type = data_type              # string
-        self.predicted_value = predicted_value  # float
+    def __init__(self, date, aggregation_mode, aggregation_interval, data_type, predicted_value):
+        self.date = date                                    # string
+        self.aggregation_mode = aggregation_mode            # string
+        self.aggregation_interval = aggregation_interval    # string
+        self.data_type = data_type                          # string
+        self.predicted_value = predicted_value              # float
 
 
 def get_db_connection():
@@ -58,15 +58,15 @@ def get_last_day_of_year(date):
     return datetime.date(year=date.year, month=12, day=31)
 
 
-def get_daterange(agg_interval, date, accuracy):
+def get_daterange(aggregation_interval, date, accuracy):
     """
     Compute a date range based on aggregation interval, prediction date and prediction accuracy
     for extracting data from a database.
     """
-    if agg_interval == YEAR:
+    if aggregation_interval == YEAR:
         # 1982-01-01 => 1981-12-31 (the last day of the prev year)
         end_date = get_last_day_of_year(date - relativedelta(years=1))
-    elif agg_interval == MONTH:
+    elif aggregation_interval == MONTH:
         # 1982-01-01 => 1981-01-31 (the last day of the month of the prev year)
         end_date = get_last_day_of_month(date - relativedelta(years=1))
     else:
@@ -80,7 +80,7 @@ def get_daterange(agg_interval, date, accuracy):
     return start_date, end_date
 
 
-def get_query(data_type, agg_mode, agg_interval, start_date, end_date, freq):
+def get_query(data_type, aggregation_mode, aggregation_interval, start_date, end_date, freq):
     """
     Define a query for extracting data from a database.
     """
@@ -89,12 +89,13 @@ def get_query(data_type, agg_mode, agg_interval, start_date, end_date, freq):
 
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
             f" WHERE data_type = '{data_type}'" \
-            f" AND aggregation_mode = '{agg_mode}' AND aggregation_interval = '{agg_interval}'" \
+            f" AND aggregation_mode = '{aggregation_mode}'" \
+            f" AND aggregation_interval = '{aggregation_interval}'" \
             f" AND '[{str_start_date}, {str_end_date}]'::daterange @> timestamp"
     if freq:
-        if agg_interval != YEAR:
+        if aggregation_interval != YEAR:
             query = query + f" AND DATE_PART('{MONTH.lower()}', timestamp) = {end_date.month}"
-        if agg_interval == DAY:
+        if aggregation_interval == DAY:
             query = query + f" AND DATE_PART('{DAY.lower()}', timestamp) <= {end_date.day}"
     query = query + f" ORDER BY timestamp"
     return query
@@ -110,16 +111,16 @@ def extract(data_type, date, accuracy, freq=False):
         cur.execute(f"SELECT aggregation_mode, aggregation_interval"
                     f" FROM {TABLE} WHERE data_type = '{data_type}'")
         if cur.rowcount > 0:
-            agg_mode, agg_interval = cur.fetchone()
-            start_date, end_date = get_daterange(agg_interval, date, accuracy)
-            query = get_query(data_type, agg_mode, agg_interval, start_date, end_date, freq)
+            aggregation_mode, aggregation_interval = cur.fetchone()
+            start_date, end_date = get_daterange(aggregation_interval, date, accuracy)
+            query = get_query(data_type, aggregation_mode, aggregation_interval, start_date, end_date, freq)
             logging.debug(f"Prediction query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
                 cur.close()
                 conn.close()
-                return df, agg_mode, agg_interval, end_date
+                return df, aggregation_mode, aggregation_interval, end_date
             else:
                 logging.error("Not enough data to predict")
                 abort(400)
@@ -166,11 +167,11 @@ def clean_anomaly(df):
         abort(400)
 
 
-def get_missing_date(last_date, end_date, agg_interval):
+def get_missing_date(last_date, end_date, aggregation_interval):
     """
     Identify a missing date.
     """
-    if agg_interval != DAY:
+    if aggregation_interval != DAY:
         missing_date = last_date + relativedelta(years=1)
         if end_date.month == 2:
             missing_date = get_last_day_of_month(missing_date)
@@ -179,7 +180,7 @@ def get_missing_date(last_date, end_date, agg_interval):
     return missing_date
 
 
-def predict_missing_values(s, end_date, agg_interval, model=None):
+def predict_missing_values(s, end_date, aggregation_interval, model=None):
     """
     Predict the target value incl. missing values to ensure that there are no prediction failures.
     """
@@ -187,7 +188,7 @@ def predict_missing_values(s, end_date, agg_interval, model=None):
         last_date = s.end_time().to_pydatetime().date()
         num_steps = 1
         while last_date != end_date:
-            missing_date = get_missing_date(last_date, end_date, agg_interval)
+            missing_date = get_missing_date(last_date, end_date, aggregation_interval)
             num_steps += 1
             last_date = missing_date
         prediction = model.predict(num_steps)
@@ -196,7 +197,7 @@ def predict_missing_values(s, end_date, agg_interval, model=None):
         last_date = s['ds'].iat[-1].date()
         periods = 1
         while last_date != end_date:
-            missing_date = get_missing_date(last_date, end_date, agg_interval)
+            missing_date = get_missing_date(last_date, end_date, aggregation_interval)
             periods += 1
             last_date = missing_date
         future = model.make_future_dataframe(periods=periods)
@@ -205,7 +206,7 @@ def predict_missing_values(s, end_date, agg_interval, model=None):
     else:
         last_date = s.index[-1].date()
         while last_date != end_date:
-            missing_date = get_missing_date(last_date, end_date, agg_interval)
+            missing_date = get_missing_date(last_date, end_date, aggregation_interval)
             if missing_date.month == end_date.month:
                 if missing_date.day <= end_date.day:
                     arr = s['data_value'].to_numpy()
@@ -214,7 +215,7 @@ def predict_missing_values(s, end_date, agg_interval, model=None):
                     prediction = pd.DataFrame({'data_value': missing_value}, index=[pd.Timestamp(missing_date)])
                     s = pd.concat([s, prediction])
             last_date = missing_date
-        missing_date = get_missing_date(last_date, end_date, agg_interval)
+        missing_date = get_missing_date(last_date, end_date, aggregation_interval)
         arr = s['data_value'].to_numpy()
         hist, bins = np.histogram(arr, bins='fd')
         missing_value = (bins[hist.argmax()] + bins[hist.argmax() + 1]) / 2
@@ -236,19 +237,19 @@ def get_predicted_value(s, model=None):
     return predicted_value
 
 
-def get_prediction(date, agg_mode, agg_interval, data_type, predicted_value):
+def get_prediction(date, aggregation_mode, aggregation_interval, data_type, predicted_value):
     """
     Formulate a prediction with prediction parameters.
     """
-    if agg_interval == YEAR:
+    if aggregation_interval == YEAR:
         date = get_last_day_of_year(date)
-    elif agg_interval == MONTH:
+    elif aggregation_interval == MONTH:
         date = get_last_day_of_month(date)
     else:
         date = date
     date = datetime.datetime.strftime(date, "%Y-%m-%d")
 
-    prediction = Prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+    prediction = Prediction(date, aggregation_mode, aggregation_interval, data_type, predicted_value)
     return vars(prediction)
 
 
@@ -271,7 +272,7 @@ def predict_with_freedman_diaconis_estimator():
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # extract data
-    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy, freq=True)
+    df, aggregation_mode, aggregation_interval, end_date = extract(data_type, date, accuracy, freq=True)
     df = preprocess(df)
     logging.debug(f"Extracted data:\n{df.tail()}")
 
@@ -280,13 +281,13 @@ def predict_with_freedman_diaconis_estimator():
 
     # predict
     old_size = df.size
-    df = predict_missing_values(df, end_date, agg_interval)
+    df = predict_missing_values(df, end_date, aggregation_interval)
     if df.size != old_size:
         logging.debug(f"Predicted data:\n{df.tail()}")
 
     # formulate a prediction
     predicted_value = get_predicted_value(df)
-    prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+    prediction = get_prediction(date, aggregation_mode, aggregation_interval, data_type, predicted_value)
     logging.info(f"Predicted with Freedman Diaconis Estimator:\n{prediction}")
     return prediction
 
@@ -310,7 +311,7 @@ def predict_with_exponential_smoothing():
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # extract data
-    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy)
+    df, aggregation_mode, aggregation_interval, end_date = extract(data_type, date, accuracy)
     ts = preprocess(df, transform='TimeSeries')
     logging.debug(f"Extracted data:\n{ts.pd_dataframe().tail()}")
 
@@ -320,13 +321,13 @@ def predict_with_exponential_smoothing():
 
     # predict
     old_size = ts.duration
-    ts = predict_missing_values(ts, end_date, agg_interval, model=m)
+    ts = predict_missing_values(ts, end_date, aggregation_interval, model=m)
     if ts.duration != old_size:
         logging.debug(f"Predicted data:\n{ts.pd_dataframe().tail()}")
 
     # formulate a prediction
     predicted_value = get_predicted_value(ts, model=m)
-    prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+    prediction = get_prediction(date, aggregation_mode, aggregation_interval, data_type, predicted_value)
     logging.info(f"Predicted with Exponential Smoothing:\n{prediction}")
     return prediction
 
@@ -350,7 +351,7 @@ def predict_with_prophet():
     date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
     # extract data
-    df, agg_mode, agg_interval, end_date = extract(data_type, date, accuracy, freq=True)
+    df, aggregation_mode, aggregation_interval, end_date = extract(data_type, date, accuracy, freq=True)
     df = preprocess(df, transform='DataFrame')
     df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
     df_renamed.set_index('timestamp', inplace=True)
@@ -362,7 +363,7 @@ def predict_with_prophet():
 
     # predict
     old_size = df.size
-    df = predict_missing_values(df, end_date, agg_interval, model=m)
+    df = predict_missing_values(df, end_date, aggregation_interval, model=m)
     df_renamed = df.rename(columns={'ds': 'timestamp', 'yhat': 'data_value'})
     df_renamed.set_index('timestamp', inplace=True)
     if df.size != old_size:
@@ -370,7 +371,7 @@ def predict_with_prophet():
 
     # formulate a prediction
     predicted_value = get_predicted_value(df, model=m)
-    prediction = get_prediction(date, agg_mode, agg_interval, data_type, predicted_value)
+    prediction = get_prediction(date, aggregation_mode, aggregation_interval, data_type, predicted_value)
     logging.info(f"Predicted with Prophet:\n{prediction}")
     return prediction
 
