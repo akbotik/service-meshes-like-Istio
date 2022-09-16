@@ -141,7 +141,7 @@ def preprocess(df, transform=None):
     df.sort_values(by=['timestamp'], inplace=True)
     if transform == 'TimeSeries':
         s = TimeSeries.from_dataframe(df, 'timestamp', 'data_value')
-    elif transform == 'DataFrame':
+    elif transform == 'ProphetDataFrame':
         s = df.rename(columns={'timestamp': 'ds', 'data_value': 'y'})
     else:
         s = df.set_index('timestamp')
@@ -352,7 +352,7 @@ def predict_with_prophet():
 
     # extract data
     df, aggregation_mode, aggregation_interval, end_date = extract(data_type, date, accuracy, freq=True)
-    df = preprocess(df, transform='DataFrame')
+    df = preprocess(df, transform='ProphetDataFrame')
     df_renamed = df.rename(columns={'ds': 'timestamp', 'y': 'data_value'})
     df_renamed.set_index('timestamp', inplace=True)
     logging.debug(f"Extracted data:\n{df_renamed.tail()}")
