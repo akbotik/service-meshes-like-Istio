@@ -51,7 +51,7 @@ class FogApplicationTests {
     public void numberOfHoursInMonth() {
         long numberOfHoursInMonth = dataHandler.getHoursForCurrentInterval(
                 new SensorData(1, ESensor.TEMPERATURE, LocalDateTime.now(),2.0));
-        assertEquals(744, numberOfHoursInMonth);
+        assertEquals(720, numberOfHoursInMonth);
     }
 
     @Test
