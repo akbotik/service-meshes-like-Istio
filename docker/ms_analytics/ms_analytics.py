@@ -18,11 +18,11 @@ TABLE = 'aggregated_data'
 
 class Prediction(object):
     def __init__(self, dt_prediction):
-        self.date = dt_prediction['date']                        # string
-        self.agg_mode = dt_prediction['agg_mode']                # string
-        self.agg_interval = dt_prediction['agg_interval']        # string
-        self.data_type = dt_prediction['data_type']              # string
-        self.predicted_value = dt_prediction['predicted_value']  # float
+        self.date = dt_prediction['date']                                   # string
+        self.aggregation_mode = dt_prediction['aggregation_mode']           # string
+        self.aggregation_interval = dt_prediction['aggregation_interval']   # string
+        self.data_type = dt_prediction['data_type']                         # string
+        self.predicted_value = dt_prediction['predicted_value']             # float
 
 
 def get_db_connection():
@@ -36,7 +36,7 @@ def get_db_connection():
     return conn
 
 
-def get_predictions(dt_predictions):
+def convert_predictions(dt_predictions):
     """
     Convert predictions from dictionaries to class objects.
     """
@@ -59,8 +59,8 @@ def validate_prediction_params(predictions):
         logging.error("Predictions are empty")
         abort(400)
     for p1, p2 in itertools.combinations(predictions, 2):
-        if (p1.date != p2.date) or (p1.agg_mode != p2.agg_mode) or \
-                (p1.agg_interval != p2.agg_interval) or (p1.data_type != p2.data_type):
+        if (p1.date != p2.date) or (p1.aggregation_mode != p2.aggregation_mode) or \
+                (p1.aggregation_interval != p2.aggregation_interval) or (p1.data_type != p2.data_type):
             logging.error("Parameters of predictions do not match")
             abort(400)
 
@@ -70,13 +70,13 @@ def get_prediction_params(predictions):
     Provide prediction parameters.
     """
     date = datetime.datetime.strptime(predictions[0].date, "%Y-%m-%d").date()
-    agg_mode = predictions[0].agg_mode
-    agg_interval = predictions[0].agg_interval
+    aggregation_mode = predictions[0].aggregation_mode
+    aggregation_interval = predictions[0].aggregation_interval
     data_type = predictions[0].data_type
-    return date, agg_mode, agg_interval, data_type
+    return date, aggregation_mode, aggregation_interval, data_type
 
 
-def extract_true_value(date, agg_mode, agg_interval, data_type):
+def extract_true_value(date, aggregation_mode, aggregation_interval, data_type):
     """
     Extract true value from a database.
     """
@@ -84,8 +84,8 @@ def extract_true_value(date, agg_mode, agg_interval, data_type):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(f"SELECT data_value FROM {TABLE}"
-                    f" WHERE timestamp = '{date}' AND aggregation_mode = '{agg_mode}'"
-                    f" AND aggregation_interval = '{agg_interval}' AND data_type = '{data_type}'")
+                    f" WHERE timestamp = '{date}' AND aggregation_mode = '{aggregation_mode}'"
+                    f" AND aggregation_interval = '{aggregation_interval}' AND data_type = '{data_type}'")
         if cur.rowcount > 0:
             true_value = cur.fetchone()[0]
             cur.close()
@@ -123,16 +123,16 @@ def estimate_errors(true_value, predictions):
     return df
 
 
-def get_thresholds(date, agg_mode, agg_interval, data_type):
+def get_thresholds(date, aggregation_mode, aggregation_interval, data_type):
     """
     Retrieve expected thresholds according to the parameters of predictions.
     """
     if data_type == thresholds.PRESSURE:
         return thresholds.get_pressure_thresholds()
     elif data_type == thresholds.TEMPERATURE:
-        if agg_interval == thresholds.YEAR:
+        if aggregation_interval == thresholds.YEAR:
             return thresholds.get_temperature_thresholds_for_year()
-        elif (agg_interval == thresholds.MONTH) or (agg_interval == thresholds.DAY):
+        elif (aggregation_interval == thresholds.MONTH) or (aggregation_interval == thresholds.DAY):
             return thresholds.get_temperature_thresholds_for_month(date.month)
         else:
             logging.error("Unknown aggregation interval")
@@ -179,10 +179,10 @@ def assess_predictions():
 
     logging.info(f"* Assess predictions: {dt_predictions}")
 
-    predictions = get_predictions(dt_predictions)
+    predictions = convert_predictions(dt_predictions)
     validate_prediction_params(predictions)
-    date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
-    true_value = extract_true_value(date, agg_mode, agg_interval, data_type)
+    date, aggregation_mode, aggregation_interval, data_type = get_prediction_params(predictions)
+    true_value = extract_true_value(date, aggregation_mode, aggregation_interval, data_type)
     logging.debug(f"True value:\n{true_value}")
     df = estimate_errors(true_value, predictions)
     logging.debug(f"Estimated errors:\n{df}")
@@ -214,10 +214,10 @@ def get_accurate_prediction():
 
     logging.info(f"* Get accurate prediction from {dt_predictions}")
 
-    predictions = get_predictions(dt_predictions)
+    predictions = convert_predictions(dt_predictions)
     validate_prediction_params(predictions)
-    date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
-    true_value = extract_true_value(date, agg_mode, agg_interval, data_type)
+    date, aggregation_mode, aggregation_interval, data_type = get_prediction_params(predictions)
+    true_value = extract_true_value(date, aggregation_mode, aggregation_interval, data_type)
     logging.debug(f"True value:\n{true_value}")
     df = estimate_errors(true_value, predictions)
     df.sort_values(by=['error'], inplace=True)
@@ -244,10 +244,10 @@ def get_valid_predictions():
 
     logging.info(f"* Get valid predictions: {dt_predictions}")
 
-    predictions = get_predictions(dt_predictions)
+    predictions = convert_predictions(dt_predictions)
     validate_prediction_params(predictions)
-    date, agg_mode, agg_interval, data_type = get_prediction_params(predictions)
-    dt_thresholds = get_thresholds(date, agg_mode, agg_interval, data_type)
+    date, aggregation_mode, aggregation_interval, data_type = get_prediction_params(predictions)
+    dt_thresholds = get_thresholds(date, aggregation_mode, aggregation_interval, data_type)
     logging.debug(f"Expected thresholds:\n[{dt_thresholds['low']}, {dt_thresholds['high']}]")
     df = check_predictions(predictions, dt_thresholds)
     logging.debug(f"Checked predictions:\n{df}")
@@ -272,5 +272,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
     app.run(host='0.0.0.0', port=PORT, debug=True)

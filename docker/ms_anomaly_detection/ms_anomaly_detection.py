@@ -29,12 +29,14 @@ def get_db_connection():
     return conn
 
 
-def get_query(data_type, start_date, end_date):
+def get_query(data_type, aggregation_mode, aggregation_interval, start_date, end_date):
     """
     Define a query for extracting data from a database.
     """
     query = f"SELECT data_value, timestamp FROM {TABLE}" \
-            f" WHERE data_type = '{data_type}'"
+            f" WHERE data_type = '{data_type}'" \
+            f" AND aggregation_mode = '{aggregation_mode}'" \
+            f" AND aggregation_interval = '{aggregation_interval}'"
     if (start_date is not None) and (end_date is not None):
         str_start_date = datetime.datetime.strftime(start_date, "%Y-%m-%d")
         str_end_date = datetime.datetime.strftime(end_date, "%Y-%m-%d")
@@ -53,15 +55,15 @@ def extract(data_type, start_date=None, end_date=None):
         cur.execute(f"SELECT aggregation_mode, aggregation_interval"
                     f" FROM {TABLE} WHERE data_type = '{data_type}'")
         if cur.rowcount > 0:
-            agg_mode, agg_interval = cur.fetchone()
-            query = get_query(data_type, start_date, end_date)
+            aggregation_mode, aggregation_interval = cur.fetchone()
+            query = get_query(data_type, aggregation_mode, aggregation_interval, start_date, end_date)
             logging.debug(f"Anomaly query:\n{query}")
             cur.execute(query)
             if cur.rowcount > 0:
                 df = pd.DataFrame(cur.fetchall(), columns=['data_value', 'timestamp'])
                 cur.close()
                 conn.close()
-                return df, agg_mode, agg_interval
+                return df, aggregation_mode, aggregation_interval
             else:
                 logging.error("Not enough data to detect")
                 abort(400)
@@ -83,22 +85,21 @@ def preprocess(df):
     return df
 
 
-def get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count, start_date=None, end_date=None):
+def get_anomaly_params(aggregation_mode, aggregation_interval, data_type, anomaly_count,
+                       start_date=None, end_date=None, low_value=None, high_value=None):
     """
     Provide anomaly detection parameters.
     """
-    dt = dict(agg_mode=agg_mode, agg_interval=agg_interval, data_type=data_type, anomaly_count=anomaly_count)
+    dt = dict(aggregation_mode=aggregation_mode, aggregation_interval=aggregation_interval,
+              data_type=data_type, anomaly_count=anomaly_count)
 
     if (start_date is not None) and (end_date is not None):
-        if agg_interval == YEAR:
-            dt['start_date'] = f"{start_date.year}"
-            dt['end_date'] = f"{end_date.year}"
-        elif agg_interval == MONTH:
-            dt['start_date'] = f"{start_date.year}-{start_date.month}"
-            dt['end_date'] = f"{end_date.year}-{end_date.month}"
-        else:
-            dt['start_date'] = f"{start_date}"
-            dt['end_date'] = f"{end_date}"
+        dt['start_date'] = datetime.datetime.strftime(start_date, "%Y-%m-%d")
+        dt['end_date'] = datetime.datetime.strftime(end_date, "%Y-%m-%d")
+
+    if (low_value is not None) and (high_value is not None):
+        dt['low_value'] = low_value
+        dt['high_value'] = high_value
     return dt
 
 
@@ -120,7 +121,7 @@ def detect():
     logging.info(f"* Detecting {data_type} anomaly")
 
     # extract data
-    df, agg_mode, agg_interval = extract(data_type)
+    df, aggregation_mode, aggregation_interval = extract(data_type)
     df = preprocess(df)
     logging.debug(f"Extracted data:\n{df.tail()}")
 
@@ -131,11 +132,8 @@ def detect():
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # formulate an anomaly
-    if anomalies.shape[0] != 0:
-        anomaly_count = df_anomaly.value_counts()[True].item()
-    else:
-        anomaly_count = 0
-    params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count)
+    anomaly_count = anomalies.shape[0]
+    params = get_anomaly_params(aggregation_mode, aggregation_interval, data_type, anomaly_count)
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
     logging.info(f"Anomaly:\n{anomaly}")
@@ -168,7 +166,7 @@ def detect_with_thresholds():
     end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
 
     # extract data
-    df, agg_mode, agg_interval = extract(data_type, start_date=start_date, end_date=end_date)
+    df, aggregation_mode, aggregation_interval = extract(data_type, start_date=start_date, end_date=end_date)
     df = preprocess(df)
     logging.debug(f"Extracted data:\n{df.tail()}")
 
@@ -179,12 +177,10 @@ def detect_with_thresholds():
     logging.debug(f"Detected anomaly:\n{anomalies.tail()}")
 
     # formulate an anomaly
-    if anomalies.shape[0] != 0:
-        anomaly_count = df_anomaly.value_counts()[True].item()
-    else:
-        anomaly_count = 0
-    params = get_anomaly_params(agg_mode, agg_interval, data_type, anomaly_count,
-                                start_date=start_date, end_date=end_date)
+    anomaly_count = anomalies.shape[0]
+    params = get_anomaly_params(aggregation_mode, aggregation_interval, data_type, anomaly_count,
+                                start_date=start_date, end_date=end_date,
+                                low_value=low_value, high_value=high_value)
     anomaly = {'params': params,
                'anomalies': anomalies.to_json(orient='index')}
     logging.info(f"Anomaly:\n{anomaly}")
@@ -246,5 +242,5 @@ def create_response(body, code):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
     app.run(host='0.0.0.0', port=PORT, debug=True)
