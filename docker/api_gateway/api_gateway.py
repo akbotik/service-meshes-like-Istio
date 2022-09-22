@@ -10,7 +10,6 @@ PORT = 8080
 IOT = 'ms-iot.default.svc.cluster.local'
 ANOMALY_DETECTION = 'ms-anomaly-detection.default.svc.cluster.local'
 PREDICTION = 'ms-prediction.default.svc.cluster.local'
-PREDICTION_ADVANCED = 'ms-prediction-advanced.default.svc.cluster.local'
 ANALYTICS = 'ms-analytics.default.svc.cluster.local'
 
 
@@ -43,7 +42,7 @@ def detect_anomaly():
 @app.route('/v1/predict', methods=['POST'])
 def predict():
     query_params = urlencode(request.args)
-    url = get_url(PREDICTION_ADVANCED, PORT, '/v1/predict' + "?" + query_params)
+    url = get_url(PREDICTION, PORT, '/v1/predict' + "?" + query_params)
     response = requests.post(url, json=request.get_json())
     return create_response(response)
 
