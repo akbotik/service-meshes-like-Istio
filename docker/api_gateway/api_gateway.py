@@ -22,7 +22,7 @@ def create_response(response):
     return response.json(), response.status_code, response.headers.items()
 
 
-@app.route('/v1/generateSensorData', methods=['POST'])
+@app.route('/api/generateSensorData', methods=['POST'])
 def generate_sensor_data():
     query_params = urlencode(request.args)
     url = get_url(IOT, PORT, '/v1/generateSensorData' + "?" + query_params)
@@ -31,7 +31,7 @@ def generate_sensor_data():
     return create_response(response)
 
 
-@app.route('/v1/detectAnomaly', methods=['POST'])
+@app.route('/api/detectAnomaly', methods=['POST'])
 def detect_anomaly():
     query_params = urlencode(request.args)
     url = get_url(ANOMALY_DETECTION, PORT, '/v1/detectAnomaly' + "?" + query_params)
@@ -39,7 +39,7 @@ def detect_anomaly():
     return create_response(response)
 
 
-@app.route('/v1/predict', methods=['POST'])
+@app.route('/api/predict', methods=['POST'])
 def predict():
     query_params = urlencode(request.args)
     url = get_url(PREDICTION, PORT, '/v1/predict' + "?" + query_params)
@@ -47,7 +47,7 @@ def predict():
     return create_response(response)
 
 
-@app.route('/v1/assessPredictions', methods=['POST'])
+@app.route('/api/assessPredictions', methods=['POST'])
 def assess_predictions():
     query_params = urlencode(request.args)
     url = get_url(ANALYTICS, PORT, '/v1/assessPredictions' + "?" + query_params)
@@ -55,7 +55,7 @@ def assess_predictions():
     return create_response(response)
 
 
-@app.route('/v1/getAccuratePrediction', methods=['POST'])
+@app.route('/api/getAccuratePrediction', methods=['POST'])
 def get_accurate_prediction():
     query_params = urlencode(request.args)
     url = get_url(ANALYTICS, PORT, '/v1/getAccuratePrediction' + "?" + query_params)
@@ -63,7 +63,7 @@ def get_accurate_prediction():
     return create_response(response)
 
 
-@app.route('/v1/getValidPredictions', methods=['DELETE'])
+@app.route('/api/getValidPredictions', methods=['DELETE'])
 def get_valid_predictions():
     query_params = urlencode(request.args)
     url = get_url(ANALYTICS, PORT, '/v1/getValidPredictions' + "?" + query_params)

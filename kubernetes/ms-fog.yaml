@@ -1,3 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-fog
+  name: ms-fog
+spec:
+  type: NodePort
+  ports:
+  - name: "ms-fog"
+    port: 8080
+    nodePort: 31001
+    targetPort: 8080
+  selector:
+    app: ms-fog
+status:
+  loadBalancer: {}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,22 +42,3 @@ spec:
         resources: {}
       restartPolicy: Always
 status: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: ms-fog
-  name: ms-fog
-spec:
-  type: NodePort
-  ports:
-  - name: "ms-fog"
-    port: 8080
-    nodePort: 31001
-    targetPort: 8080
-  selector:
-    app: ms-fog
-status:
-  loadBalancer: {}
-

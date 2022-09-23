@@ -19,13 +19,14 @@ prediction_models = [None, 'ExponentialSmoothing', 'Prophet']
 
 
 def get_url(host, port, path):
-    url = f"http://{host}:{port}{path}"
+    # url = f"http://{host}:{port}{path}"
+    url = f"http://{host}{path}"
     return url
 
 
 def generate_data(data_type, port):
-    duration = 1800000  # in milliseconds
-    url = get_url('localhost', port, '/v1/generateSensorData?requestDuration=' + str(duration))
+    duration = 300000  # in milliseconds
+    url = get_url('localhost', port, '/api/generateSensorData?requestDuration=' + str(duration))
     sensor_id = random.randint(1, 100)
     sensor_type = data_type
     body = dict(id=sensor_id, type=sensor_type)
@@ -50,7 +51,7 @@ def get_random_anomaly_thresholds(data_type):
 def detect_anomaly(thresholds, date_start, date_end):
     data_type = random.choice(data_types)
     if thresholds:
-        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/v1/detectAnomaly?thresholds=' + str(thresholds))
+        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/api/detectAnomaly?thresholds=' + str(thresholds))
         start_date = Faker().date_between_dates(date_start=date_start, date_end=date_end)
         start_date = datetime.strftime(start_date, "%Y-%m-%d")
         end_date = datetime.strftime(date_end, "%Y-%m-%d")
@@ -60,7 +61,7 @@ def detect_anomaly(thresholds, date_start, date_end):
         logging.info(f"Detect {data_type} anomaly from {start_date} to {end_date} "
                      f"with thresholds {low_value}, {high_value}")
     else:
-        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/v1/detectAnomaly')
+        url = get_url('localhost', ANOMALY_DETECTION_PORT, '/api/detectAnomaly')
         body = dict(type=data_type)
         logging.info(f"Detect {data_type} anomaly")
     requests.post(url, json=body)
@@ -68,7 +69,8 @@ def detect_anomaly(thresholds, date_start, date_end):
 
 def get_random_prediction_body(date_start, date_end):
     data_type = random.choice(data_types)
-    date = Faker().date_between(start_date=random.choice((date_start, date_end)))
+    # date = Faker().date_between(start_date=random.choice((date_start, date_end)))
+    date = datetime(1971, 11, 1)
     date = datetime.strftime(date, "%Y-%m-%d")
     accuracy = random.choice(prediction_accuracies)
     body = dict(type=data_type, date=date, accuracy=accuracy)
@@ -78,9 +80,9 @@ def get_random_prediction_body(date_start, date_end):
 
 def predict(model, body):
     if model is not None:
-        url = get_url('localhost', PREDICTION_PORT, '/v1/predict?predictionModel=' + model)
+        url = get_url('localhost', PREDICTION_PORT, '/api/predict?predictionModel=' + model)
     else:
-        url = get_url('localhost', PREDICTION_PORT, '/v1/predict')
+        url = get_url('localhost', PREDICTION_PORT, '/api/predict')
     response = requests.post(url, json=body)
     try:
         prediction = response.json()
@@ -103,21 +105,21 @@ def get_predictions(executor, date_start, date_end):
 
 
 def assess_predictions(predictions):
-    url = get_url('localhost', ANALYTICS_PORT, '/v1/assessPredictions')
+    url = get_url('localhost', ANALYTICS_PORT, '/api/assessPredictions')
     body = dict(predictions=predictions)
     logging.info(f"Assess predictions: {predictions}")
     requests.post(url, json=body)
 
 
 def get_accurate_prediction(predictions):
-    url = get_url('localhost', ANALYTICS_PORT, '/v1/getAccuratePrediction')
+    url = get_url('localhost', ANALYTICS_PORT, '/api/getAccuratePrediction')
     body = dict(predictions=predictions)
     logging.info(f"Get accurate prediction from {predictions}")
     requests.post(url, json=body)
 
 
 def get_valid_predictions(predictions):
-    url = get_url('localhost', ANALYTICS_PORT, '/v1/getValidPredictions')
+    url = get_url('localhost', ANALYTICS_PORT, '/api/getValidPredictions')
     body = dict(predictions=predictions)
     logging.info(f"Get valid predictions: {predictions}")
     requests.delete(url, json=body)
@@ -131,7 +133,7 @@ def run():
     with ThreadPoolExecutor(max_workers=10) as executor:
         # submit a task with arguments
         executor.submit(generate_data, data_types[0], IOT_PORTS[0])  # does not block
-        executor.submit(generate_data, data_types[1], IOT_PORTS[1])
+        # executor.submit(generate_data, data_types[1], IOT_PORTS[1])
         while True:
             time.sleep(30)  # in seconds
             date_end = date_end + date_step

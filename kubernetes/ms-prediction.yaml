@@ -1,30 +1,3 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: ms-prediction
-  name: ms-prediction
-spec:
-  replicas: 1
-  strategy: {}
-  selector:
-    matchLabels:
-      app: ms-prediction
-  template:
-    metadata:
-      labels:
-        app: ms-prediction
-    spec:
-      containers:
-      - name: ms-prediction
-        image: bachelor/ms-prediction:v1
-        imagePullPolicy: IfNotPresent
-        ports:
-          - containerPort: 8080
-        resources: {}
-      restartPolicy: Always
-status: {}
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -42,4 +15,61 @@ spec:
     app: ms-prediction
 status:
   loadBalancer: {}
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-prediction
+    version: v1
+  name: ms-prediction-1
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      app: ms-prediction
+  template:
+    metadata:
+      labels:
+        app: ms-prediction
+        version: v1
+    spec:
+      containers:
+      - name: ms-prediction
+        image: bachelor/ms-prediction:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+        resources: {}
+      restartPolicy: Always
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-prediction
+    version: v2
+  name: ms-prediction-2
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      app: ms-prediction
+  template:
+    metadata:
+      labels:
+        app: ms-prediction
+        version: v2
+    spec:
+      containers:
+      - name: ms-prediction
+        image: bachelor/ms-prediction-advanced:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+        resources: {}
+      restartPolicy: Always
+status: {}
