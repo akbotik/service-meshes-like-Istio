@@ -19,7 +19,9 @@ prediction_models = [None, 'ExponentialSmoothing', 'Prophet']
 
 
 def get_url(host, port, path):
+    # run bachelor/implementation
     # url = f"http://{host}:{port}{path}"
+    # run bachelor/istio
     url = f"http://{host}{path}"
     return url
 
@@ -69,8 +71,7 @@ def detect_anomaly(thresholds, date_start, date_end):
 
 def get_random_prediction_body(date_start, date_end):
     data_type = random.choice(data_types)
-    # date = Faker().date_between(start_date=random.choice((date_start, date_end)))
-    date = datetime(1971, 11, 1)
+    date = Faker().date_between(start_date=random.choice((date_start, date_end)))
     date = datetime.strftime(date, "%Y-%m-%d")
     accuracy = random.choice(prediction_accuracies)
     body = dict(type=data_type, date=date, accuracy=accuracy)
