@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-prediction
+  name: ms-prediction
+spec:
+  type: NodePort
+  ports:
+  - name: "ms-prediction"
+    port: 8080
+    nodePort: 31003
+    targetPort: 8080
+  selector:
+    app: ms-prediction
+status:
+  loadBalancer: {}

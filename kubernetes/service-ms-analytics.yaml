@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-analytics
+  name: ms-analytics
+spec:
+  type: NodePort
+  ports:
+  - name: "ms-analytics"
+    port: 8080
+    nodePort: 31005
+    targetPort: 8080
+  selector:
+    app: ms-analytics
+status:
+  loadBalancer: {}

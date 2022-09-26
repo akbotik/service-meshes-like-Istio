@@ -1,26 +1,9 @@
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: ms-anomaly-detection
-  name: ms-anomaly-detection
-spec:
-  type: NodePort
-  ports:
-  - name: "ms-anomaly-detection"
-    port: 8080
-    nodePort: 31002
-    targetPort: 8080
-  selector:
-    app: ms-anomaly-detection
-status:
-  loadBalancer: {}
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app: ms-anomaly-detection
+    version: v1
   name: ms-anomaly-detection
 spec:
   replicas: 1
@@ -32,6 +15,7 @@ spec:
     metadata:
       labels:
         app: ms-anomaly-detection
+        version: v1
     spec:
       containers:
       - name: ms-anomaly-detection
