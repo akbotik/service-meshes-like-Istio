@@ -1,0 +1,45 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: fault-injection-delay
+spec:
+  hosts:
+  - ms-prediction.default.svc.cluster.local
+  http:
+  - fault:
+      delay:
+        fixedDelay: 10s
+        percentage:
+          value: 100
+    match:
+    - uri:
+        prefix: /v1/predict
+      queryParams:
+        predictionModel:
+          exact: "Prophet"
+    route:
+    - destination:
+        host: ms-prediction.default.svc.cluster.local
+        subset: v2
+        port:
+          number: 8080
+  - route:
+    - destination:
+        host: ms-prediction.default.svc.cluster.local
+        subset: v1
+        port:
+          number: 8080
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: ms-prediction
+spec:
+  host: ms-prediction.default.svc.cluster.local
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
